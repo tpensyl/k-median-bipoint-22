@@ -80,11 +80,12 @@ massbgamma1={{1,0,0,x,y1,z1},{1,0,x,0,y1,z1},{0,1,0,x,y1,z1},{0,1,x,0,y1,z1},
 massOnlyC={{1,0,x,y,1,z},{0,1,x,y,1,z},{1,0,y,x,1,z},{0,1,y,x,1,z}}/.{
 	x->Max[Min[1,(b-gammaC)/gammaB],0], y->Min[Max[0,1-(gammaC-b)/gammaB],1],z->Max[0,(b-gammaB-gammaC)/(1-gammaC)]};
 massCombos={{0,1,0,1,b,b} (*11: combine 2,5*)
-			,{1,0,1,0,b,b} (*12: combine 1,3*)
-			,{0,1,1,0,b,b} (*13: flatten 4*)
-            ,{0,1,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*14: flatten 7*)
-            ,{1,0,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*15: flatten 6*)
+			,{1,0,1,0,b,b} (*29 combine 1,3*)
+			,{0,1,1,0,b,b} (*30: flatten 4*)
+            ,{0,1,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*31: flatten 7*)
+            ,{1,0,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*32: flatten 6*)
 			(*{0,1,0,y,x,x}/.{x->Min[1,b+gammaB],y->Max[0,1-(1-b)/gammaB]}*)(*flatten 9, but this is cheating *)
+			,{1,0,1,x,mu*x,mu*x}/.{x->b/(gammaB+mu)}/.{mu->1/2(1+1/g)} (* 33: further flatten 29 and 32 *)
 };
 
 
@@ -179,19 +180,20 @@ ExtractNonLin[sol_]:=Select[sol,MemberQ[varNonLin,#[[1]]]&]
 createVar[terms__]:=ToExpression@StringJoin@@ToString/@List[terms]
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Solving the NLP*)
 
 
 algsI7={8,22,28,29,30,31,32}; (* re-add some algo. Graphically, (with some heuristic), 5(8 now) seems to be the 'most complete' algo to add.*)
 algsI8={4,8,22,28,29,30,31,32};
 algsI7b={4,8,22,29,30,31,32}; (* our in-between wasn't actually special here *)
-algsI=algsI7b
+algsI6b={4,8,22,30,31,33};
+algsI=algsI6b
 ghat=0.6586
-solNLP=SolveNLP[ghat,300,algsI7b]
+solNLP=SolveNLP[ghat,300,algsI]
 
 
-sol=SolveLPatSol[{gammaB->.25,gammaC->.25}~Join~solNLP,algsI7b(*, constrD1D2~Union~constrD1D2g*)];
+sol=SolveLPatSol[solNLP,algsI7b(*, constrD1D2~Union~constrD1D2g*)];
 Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI7b]}
 
 
@@ -225,38 +227,102 @@ SolveDualLP[nonLinParams_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=Mod
 	{dualOpt, dualSol} = NMinimize[Append[tdual[[1]],constrExtra]/.ExtractNonLin@nonLinParams,tdual[[2]]];
 	dualSol
 ]~Join~nonLinParams
-EvaluateAlgs[params_,algIset_:;;]:=Join[
+EvaluateDual[params_,algIset_:;;]:=Join[
 	{{"u[alg]", "Alg Mass","Alg Index"}},
 	Table[{u[i], Style[algMass,PrintPrecision->2], algIndex}/.algsWithMass[[algIset[[i]]]],{i,1,Length[algIset]}],
-	{{u[7],Style[{a,a,a,b,b,b,b,b,b},PrintPrecision->2]/.{a->1-b},"LS"}}
+	{{u[Length@algIset+1],Style[{a,a,a,b,b,b,b,b,b},PrintPrecision->2]/.{a->1-b},"LS"}}
 ]/.params
 
 
 
-SolveDualLP[sol,algsI7b]
-Grid@EvaluateAlgs[%,algsI7b]
+algsI=algsI7b
+solDual=SolveDualLP[sol,algsI]
+Grid@EvaluateDual[%,algsI] 
+
+
+(* ::Subsection:: *)
+(*Explore Dual*)
 
 
 (* Initialize manipulate *)
 {b0,g0,gammaB0,gammaC0}={b,g,gammaB,gammaC}/.sol;
 
 
-Manipulate[Module[{solDual},
+algsI=algsI6b
+constrExtra={};
+Manipulate[
     {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
-    solDual = SolveDualLP[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg},algsI7b,{u[testi]>=eps1}];
-    Column@{alpha/.solDual, Grid@EvaluateAlgs[solDual,algsI7b]}
-],{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.1,1.5,.001},{{pgammaC,gammaC0},.1,1,.001},{{pg,g0},.01,1,.001}
-   ,{eps1,0,1,.01},{testi,1,8,1}]
+    msolDual = SolveDualLP[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg},algsI,{u[i1]>=eps1}];
+	mtmp=(u[i1]*allMass[[algsI[[i1]]]]+u[i2]*allMass[[algsI[[i2]]]])/(u[i1]+u[i2]) /.msolDual;
+    Column@{alpha/.msolDual, Grid@EvaluateDual[msolDual,algsI],
+	(* What mass would be needed to combine first and second algos *)
+	mtmp, mtmp[[5]]/mtmp[[4]],algsI[[i2]]/algsI[[i1]],1/2(1+1/g)}/.msolDual
+   ,{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.1,1.5,.001},{{pgammaC,gammaC0},.1,1,.001},{{pg,g0},.01,1,.001}
+   ,{eps1,0,1,.01},{i1,1,8,1},{i2,1,8,1}]
 
 
 {b0,gammaB0,gammaC0}={tb,tgammaB,tgammaC} (* optionally persist modifications *)
 
 
+(* ::Subsubsection:: *)
+(*Explore parameters*)
+
+
+Plot[{#[[4]],#[[5]]}*(.6+pgammaB)&[(u[4]*allMass[[algsI[[4]]]]+u[5]*allMass[[algsI[[5]]]])/(u[4]+u[5])]
+	/.SolveDualLP[{b->(b/.sol),gammaB->pgammaB,gammaC->.0001,g->ghat},algsI],{pgammaB,0.01,1},PlotRange->{0,1}]
+
+
+Plot[{#[[4]],#[[5]]}&[(u[4]*allMass[[algsI[[4]]]]+u[5]*allMass[[algsI[[5]]]])/(u[4]+u[5])]
+	/.SolveDualLP[{b->pb,gammaB->(gammaB/.sol),gammaC->.0001,g->ghat},algsI],{pb,0.01,1},PlotRange->{0,1}]
+
+
+Plot[{#[[4]],#[[5]],#[[5]]/#[[4]]}&[(u[4]*allMass[[algsI[[4]]]]+u[5]*allMass[[algsI[[5]]]])/(u[4]+u[5])]
+	/.SolveDualLP[{b->(b/.sol),gammaB->(gammaB/.sol),gammaC->.0001,g->pg},algsI],{pg,0.01,1},PlotRange->{0,1}]
+
+
+points=Table[{n,g,#[[4]],#[[5]],#[[5]]/#[[4]]}&[(u[4]*allMass[[algsI[[4]]]]+u[5]*allMass[[algsI[[5]]]])/(u[4]+u[5])]
+	/.SolveDualLP[{b->2/3,gammaB->1/2,gammaC->1/2,g->1-1/n},algsI],{n,2,15}]
+
+
+
+ExtractNonLin@sol
+
+
+(* ::Subsubsection:: *)
+(*Try Exact Solve*)
+
+
+algsI=algsI6b
+constrExtra={};
+Table[SolveDualLP[{b->2/3,gammaB->1/2,gammaC->1/2,g->1-1/6},algsI,{0<=g<=1}]
+u[4]/u[5]/.%
+
+
+SolveDualLP[{b->2/3,gammaB->1/2,gammaC->1/2,g->g},algsI,{1/2<=g<=1}
+
+
+(* ::Subsubsection::Closed:: *)
+(*Scratch*)
+
+
+algsI6test={4,8,29,30,31,32} (*rm 22*)
+constrX={Z<=.2*algs[[22]]+.8*algs[[28]]};
+
+
+algsI=algsI6test
+sol3=SolveNLP[ghat,300,algsI,constrX]
+sol3=SolveLPatSol[sol3,algsI,constrX];
+Column@{Z/.sol3,Chop[sol3, .0001],EvaluateAlgsByMass[sol3,algsI]}
+
+
+Plot[{u[4],u[5]}/(u[4]+u[5])/.SolveDualLP[{b->(b/.sol),gammaB->pgammaB,gammaC->.0001,g->ghat},algsI6b],{pgammaB,0.01,1},PlotRange->{0,1}]
+
+
 (* ::Section::Closed:: *)
-(*Exploration*)
+(*Previous Exploration*)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Do we smoothly and fully optimize for full range of parameters?*)
 
 
@@ -266,26 +332,28 @@ ListPlot[{gammaB,b}/.#&/@solGrid] (* b is usually around .67 *)
 
 
 (* the extra d-constraints arent immediately valid, but necessary to smooth out small gamma region. to make valid, we would need to split clients into multiple classes, according to which facility is closest *)
-Table[Plot[Z-.32tb/.SolveLPatSol[{g->tg,b->tb,algsI,gammaB->.02,gammaC->.02},All,(*constrD1D2~Union~*)constrD1D2g],{tb,.3,.6}], {tg, .5, .7, .05}]
+Table[Plot[Z-.32tb/.SolveLPatSol[{g->tg,b->tb,algsI,gammaB->.02,gammaC->.02},algsI6b,constrD1D2~Union~constrD1D2g],{tb,.3,.6}], {tg, .5, .7, .05}]
 
 
 (*plotGrid=Table[Plot[{1.012,Z}/.SolveLPatSol[{g->.6586,b->.01,algsI,gammaB->gamma,gammaC->gamma},algsI6~Join~{i}],{gamma,0,1}],{i,1,8}]*)
 
 
 sols3=ParallelTable[SolveLPatSol[{g->.6586,b->pb,gammaB->gamma,gammaC->Min[gamma,.9999]},All,constrD1D2~Union~constrD1D2g]
-	,{gamma,0.011,2,.1},{pb,0.01,1,.03}]~Flatten~1;
+	,{gamma,0.011,1.5,.1},{pb,0.01,1,.04}]~Flatten~1;
 points3={gammaB, b, Z}/.#&/@sols3;
 plot3=ListPlot3D[points3,ColorFunction->(RGBColor[0,1,0]&),AxesLabel->{"gamma","b","Z"}]
 
 
 
-sols4=ParallelTable[SolveLPatSol[{g->.6586,b->pb,gammaB->gamma,gammaC->Min[gamma,.9999]},algsI7b,constrD1D2~Union~constrD1D2g]
-	,{gamma,0.011,2,.1},{pb,0.01,1,.03}]~Flatten~1;
-points4={gammaB, b, Z}/.#&/@sols4;
-plot4=ListPlot3D[points4,ColorFunction->(RGBColor[1,0,0]&),AxesLabel->{"gamma","b","Z"}];
+sols4=ParallelTable[{SolveLPatSol[{g->.6586,b->pb,gammaB->gamma,gammaC->Min[gamma,.9999]},algsI6b,constrD1D2~Union~constrD1D2g]
+	                ,SolveLPatSol[{g->.6586,b->pb,gammaB->gamma,gammaC->Min[gamma,.9999]},All,    constrD1D2~Union~constrD1D2g]}
+	,{gamma,0.011,1.5,.1},{pb,0.01,1,.04}]~Flatten~1;
+points4={gammaB/.#[[1]], b/.#[[1]], (Z/.#[[1]]) - (Z/.#[[2]])}&/@sols4;
+plot4=ListPlot3D[points4,ColorFunction->(RGBColor[1,0,0]&),AxesLabel->{"gamma","b","Z"}]
 
 
-Show[plot3,plot4] (* yes, 7b does as well as All. notice we need constrD1D2g for smoothness*)
+sols4[[1]]
+{gammaB/.#[[1]], b/.#[[1]], (Z/.#[[1]]) - (Z/.#[[2]])}&@%
 
 
 algsI=algsI7b
@@ -295,7 +363,7 @@ sol=SolveLPatSol[solNLP,algsI];
 Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Explore Tight Point*)
 
 
