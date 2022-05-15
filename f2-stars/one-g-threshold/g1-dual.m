@@ -4,7 +4,7 @@
 (*F2-Stars*)
 
 
-SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->10]
+SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->8]
 SetOptions[Plot3D, AxesLabel->Automatic,
 	PlotStyle->Opacity[.7], ClippingStyle->None,
 	BoundaryStyle -> Directive[Black, Thick]];
@@ -86,15 +86,13 @@ massCombos={{0,1,0,1,b,b} (*11: combine 2,5*)
             ,{1,0,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*32: flatten 6*)
 			(*{0,1,0,y,x,x}/.{x->Min[1,b+gammaB],y->Max[0,1-(1-b)/gammaB]}*)(*flatten 9, but this is cheating *)
 			,{1,0,1,x,mu*x,mu*x}/.{x->b/(gammaB+mu)}/.{mu->1/2(1+1/g)} (* 33: further flatten 29 and 32 *)
+			,{0,1,1,x,y,y}/.{x->1-g*mu,y->1-mu}/.{mu->(1-b+gammaB)/(1+g*gammaB)} (* 34 futher flatten 30 and 31 *)
 };
 
 
-Solve[0*gammaB+x==b+gammaB,x]
-Solve[y*gammaB+1==b+gammaB,y]
-Clear[a,b]
 CheckMass[mass_]:=FullSimplify[{gA,gA,gammaB,gammaB,gammaC,1-gammaC}.(mass-{a,b,a,b,b,b})/.{a->1-b},
 	{0<b<1,0<gammaB<1}]
-CheckMass/@massCombos
+CheckMass/@massCombos (* check if the mass balances; it should equal zero *)
 
 
 (* ::Subsubsection::Closed:: *)
@@ -180,7 +178,7 @@ ExtractNonLin[sol_]:=Select[sol,MemberQ[varNonLin,#[[1]]]&]
 createVar[terms__]:=ToExpression@StringJoin@@ToString/@List[terms]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Solving the NLP*)
 
 
@@ -188,13 +186,14 @@ algsI7={8,22,28,29,30,31,32}; (* re-add some algo. Graphically, (with some heuri
 algsI8={4,8,22,28,29,30,31,32};
 algsI7b={4,8,22,29,30,31,32}; (* our in-between wasn't actually special here *)
 algsI6b={4,8,22,30,31,33};
-algsI=algsI6b
+algsI5={4,8,22,33,34};
+algsI=algsI5
 ghat=0.6586
 solNLP=SolveNLP[ghat,300,algsI]
 
 
-sol=SolveLPatSol[solNLP,algsI7b(*, constrD1D2~Union~constrD1D2g*)];
-Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI7b]}
+sol=SolveLPatSol[solNLP,algsI5(*, constrD1D2~Union~constrD1D2g*)];
+Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI5]}
 
 
 (* ::Subsection:: *)
@@ -204,7 +203,7 @@ Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI7b]}
 (* ::Text:: *)
 (*By setting g=.6586, we get approximation factor 1.31019*)
 (**)
-(*This file uses a minimal set of 7 algos to achieve this. *)
+(*This file uses a minimal set of 5 algos to achieve this. *)
 (**)
 (*I think this NLP could be simplified by padding such that |F2C|=min{|F2B|,|Y|}, to eliminate need for gammaC variable.*)
 
@@ -224,7 +223,7 @@ varsU=Table[u[i],{i,1,Length@algs}];
 ]
 SolveDualLP[nonLinParams_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=Module[{tdual, dualOpt, dualSol},
 	tdual = ToDual[algs[[algI]]~Append~costLiSven,varD1,varD2];
-	{dualOpt, dualSol} = NMinimize[Append[tdual[[1]],constrExtra]/.ExtractNonLin@nonLinParams,tdual[[2]]];
+	{dualOpt, dualSol} = Minimize[Append[tdual[[1]],constrExtra]/.ExtractNonLin@nonLinParams,tdual[[2]]];
 	dualSol
 ]~Join~nonLinParams
 EvaluateDual[params_,algIset_:;;]:=Join[
@@ -265,11 +264,11 @@ Manipulate[
 
 
 (* ::Subsubsection:: *)
-(*Explore parameters*)
+(*Explore parameters - combining 30 and 31*)
 
 
-Plot[{#[[4]],#[[5]]}*(.6+pgammaB)&[(u[4]*allMass[[algsI[[4]]]]+u[5]*allMass[[algsI[[5]]]])/(u[4]+u[5])]
-	/.SolveDualLP[{b->(b/.sol),gammaB->pgammaB,gammaC->.0001,g->ghat},algsI],{pgammaB,0.01,1},PlotRange->{0,1}]
+Plot[{#[[5]]/#[[4]]}&[(u[4]*allMass[[algsI[[4]]]]+u[5]*allMass[[algsI[[5]]]])/(u[4]+u[5])]
+	/.SolveDualLP[{b->3/5,gammaB->pgammaB,gammaC->.00001,g->1/3},algsI],{pgammaB,0.01,1},PlotRange->{0,1}]
 
 
 Plot[{#[[4]],#[[5]]}&[(u[4]*allMass[[algsI[[4]]]]+u[5]*allMass[[algsI[[5]]]])/(u[4]+u[5])]
@@ -280,25 +279,46 @@ Plot[{#[[4]],#[[5]],#[[5]]/#[[4]]}&[(u[4]*allMass[[algsI[[4]]]]+u[5]*allMass[[al
 	/.SolveDualLP[{b->(b/.sol),gammaB->(gammaB/.sol),gammaC->.0001,g->pg},algsI],{pg,0.01,1},PlotRange->{0,1}]
 
 
-points=Table[{n,g,#[[4]],#[[5]],#[[5]]/#[[4]]}&[(u[4]*allMass[[algsI[[4]]]]+u[5]*allMass[[algsI[[5]]]])/(u[4]+u[5])]
-	/.SolveDualLP[{b->2/3,gammaB->1/2,gammaC->1/2,g->1-1/n},algsI],{n,2,15}]
+Solve[{(4-3g)/(4+2g)==x5/x4, gammaB*x4+x5==b}, {x4, x5}]
 
 
+partialDual1={
+	{b->3/5, gammaB->1/3, mu->1/3(4+5g)/(5-2g)}, 
+	{b->3/5, gammaB->2/5, mu->(1+2g)/(5-2g)}, 
+	{b->3/5, gammaB->1/2, mu->1/2(1+5g)/(5-2g)}, 
+	{b->3/5, gammaB->3/5, mu->3g/(5-2g)}, 
+    {b->2/3, gammaB->1/4, mu->1/4*(5+3g)/(3-g)}, 
+	{b->2/3, gammaB->2/7,mu->2/7*(4+3g)/(3-g)}, 
+	{b->2/3, gammaB->1/3, mu->1/3*(3+3g)/(3-g)}, 
+	{b->2/3, gammaB->2/5,mu->2/5(2+3g)/(3-g)}, 
+    {b->2/3, gammaB->1/2,mu->1/2*(1+3g)/(3-g)}, 
+	{b->2/3, gammaB->3/5,mu->1/5*(1+9g)/(3-g)}, 
+    {b->2/3, gammaB->2/3, mu->2/3*(0+3g)/(3-g)}, 
 
-ExtractNonLin@sol
+	{b->2/3, gammaB->3/4, mu->1/4*(-1+9g)/(3-g)}
+};
+partialDual={
+	{b->3/5, mu->(3-5gammaB(1-g))/(5-2g)}, 
+	{b->2/3, mu->(2-3gammaB(1-g))/(3-g)}, 
+	{b->7/10, mu->(7-10gammaB(1-g))/(10-3g)}, 
+	{b->3/4, mu->(3-4gammaB(1-g))/(4-g)}, 
+	{mu->(b-gammaB(1-g))/(1-g(1-b))} 
+}
 
 
-(* ::Subsubsection:: *)
-(*Try Exact Solve*)
+b/(1+gammaB/mu)/.{mu->(b-gammaB(1-g))/(1-g(1-b))}//Simplify
+b/(mu+gammaB)/.{mu->(b-gammaB(1-g))/(1-g(1-b))}//Simplify
+{(b+(-1+g) gammaB)/(1+g gammaB),(1+(-1+b) g)/(1+g gammaB)}
 
 
-algsI=algsI6b
-constrExtra={};
-Table[SolveDualLP[{b->2/3,gammaB->1/2,gammaC->1/2,g->1-1/6},algsI,{0<=g<=1}]
-u[4]/u[5]/.%
-
-
-SolveDualLP[{b->2/3,gammaB->1/2,gammaC->1/2,g->g},algsI,{1/2<=g<=1}
+e.=partialDual[[5]]
+points=Table[{n,g," ",#[[4]],b/(gammaB+mu)," ", b/(1+gammaB/mu),  #[[5]]," "
+				, #[[5]]/#[[4]],mu , mu/(#[[5]]/#[[4]])
+				}/.params~Select~(#[[1]]==mu&)&@(
+		(u[4]*allMass[[algsI[[4]]]]+u[5]*allMass[[algsI[[5]]]])/(u[4]+u[5])
+	)/.SolveDualLP[params~Join~({b->.69,gammaB->gm,gammaC->gm,g->1-1/n}/.{gm->.71}/.params),algsI]
+,{n,2,6}];
+Grid@points
 
 
 (* ::Subsubsection::Closed:: *)
@@ -345,6 +365,7 @@ plot3=ListPlot3D[points3,ColorFunction->(RGBColor[0,1,0]&),AxesLabel->{"gamma","
 
 
 
+(* with algsI6b, there is maybe some small looseness in outer regions ? *)
 sols4=ParallelTable[{SolveLPatSol[{g->.6586,b->pb,gammaB->gamma,gammaC->Min[gamma,.9999]},algsI6b,constrD1D2~Union~constrD1D2g]
 	                ,SolveLPatSol[{g->.6586,b->pb,gammaB->gamma,gammaC->Min[gamma,.9999]},All,    constrD1D2~Union~constrD1D2g]}
 	,{gamma,0.011,1.5,.1},{pb,0.01,1,.04}]~Flatten~1;
