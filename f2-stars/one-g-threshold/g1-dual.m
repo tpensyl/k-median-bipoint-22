@@ -247,24 +247,59 @@ Grid@EvaluateDual[%,algsI]
 {b0,g0,gammaB0,gammaC0}={b,g,gammaB,gammaC}/.sol;
 
 
-algsI=algsI6b
+BigFractionStyle = Style[#, DefaultOptions -> {FractionBoxOptions -> {AllowScriptLevelChange -> False}}] &;
+algsI=algsI5
 constrExtra={};
 Manipulate[
     {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
-    msolDual = SolveDualLP[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg},algsI,{u[i1]>=eps1}];
-	mtmp=(u[i1]*allMass[[algsI[[i1]]]]+u[i2]*allMass[[algsI[[i2]]]])/(u[i1]+u[i2]) /.msolDual;
-    Column@{alpha/.msolDual, Grid@EvaluateDual[msolDual,algsI],
+    msolDual = SolveDualLP[{b->pb,gammaB->pgammaB,gammaC->Min[1,pgammaB],g->pg},algsI(*,{u[i1]>=eps1}*)];
+	mtmp=Total[u[#]*allMass[[algsI[[#]]]]&/@{i1,i2,3}]/Total[u[#]&/@{i1,i2,3}] /.msolDual;
+    BigFractionStyle@Column@{alpha/.msolDual, Grid@EvaluateDual[msolDual,algsI],
 	(* What mass would be needed to combine first and second algos *)
-	mtmp, mtmp[[5]]/mtmp[[4]],algsI[[i2]]/algsI[[i1]],1/2(1+1/g)}/.msolDual
-   ,{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.1,1.5,.001},{{pgammaC,gammaC0},.1,1,.001},{{pg,g0},.01,1,.001}
-   ,{eps1,0,1,.01},{i1,1,8,1},{i2,1,8,1}]
+	mtmp, mtmp[[5]]/mtmp[[4]],{algsI[[i2]],algsI[[i1]]},1/2(1+1/g)}/.msolDual
+   ,{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.01,1.5,.001},{{pgammaC,gammaC0},.01,1,.001},{{pg,g0},.01,1,.001}
+   ,{eps1,0,1,.01},{i1,1,Length@algsI,1},{i2,1,Length@algsI,1}]
 
 
 {b0,gammaB0,gammaC0}={tb,tgammaB,tgammaC} (* optionally persist modifications *)
 
 
 (* ::Subsubsection:: *)
-(*Explore parameters - combining 30 and 31*)
+(*Explore DUAL - combining the F1=0 cases*)
+
+
+BigFractionStyle = Style[#, DefaultOptions -> {FractionBoxOptions -> {AllowScriptLevelChange -> False}}] &;
+algsI=algsI5
+constrExtra={};
+Manipulate[
+    {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
+    msolDual = SolveDualLP[{b->pb,gammaB->pgammaB,gammaC->Min[1,pgammaB],g->pg},algsI(*,{u[i1]>=eps1}*)];
+	mtmp=Total[u[#]*allMass[[algsI[[#]]]]&/@{i1,i2,3}]/Total[u[#]&/@{i1,i2,3}] /.msolDual;
+    BigFractionStyle@Column@{alpha/.msolDual, Grid@EvaluateDual[msolDual,algsI],
+	(* What mass would be needed to combine first and second algos *)
+	mtmp, mtmp[[5]]/mtmp[[4]],{algsI[[i2]],algsI[[i1]]},1/2(1+1/g)}/.msolDual
+   (*,{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.01,1.5,.001},{{pgammaC,gammaC0},.01,1,.001},{{pg,g0},.01,1,.001}*)
+	,{{pb,2/3},0/60,1,1/12},{{pgammaB,2/3},0/60,1,1/12},{{pg,1/2},0/60,1,1/12}
+   ,{eps1,0,1,.01},{i1,1,Length@algsI,1},{i2,1,Length@algsI,1}]
+
+
+Protect[mu1,mu2]
+partialDual2={
+	 {b->2/3, g->1/2, mu1->(3 gammaB+5)/(3 gammaB+6),mu2->(3 gammaB+4)/(3 gammaB+6)}
+	,{b->2/3, g->2/3, mu1->(3 gammaB+5)/(3 gammaB+6),mu2->(3 gammaB+4)/(3 gammaB+6)}
+};
+params=partialDual2[[2]]
+points=Table[{n,gammaB," ",#[[4]],mu1," "
+                          ,#[[5]],mu2," "
+				}/.params~Select~(MemberQ[{mu1,mu2},#[[1]]]&)&@(
+		Total[u[#]*allMass[[algsI[[#]]]]&/@{1,2,3}] / Total[u[#]&/@{1,2,3}]
+	)/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ params~Join~{b->2/3,gammaB->n/12,g->1/2} ],algsI]
+,{n,1,11}];
+BigFractionStyle@Grid@points
+
+
+(* ::Subsubsection:: *)
+(*Explore TOOL - combining 30 and 31*)
 
 
 Plot[{#[[5]]/#[[4]]}&[(u[4]*allMass[[algsI[[4]]]]+u[5]*allMass[[algsI[[5]]]])/(u[4]+u[5])]
@@ -311,7 +346,7 @@ b/(mu+gammaB)/.{mu->(b-gammaB(1-g))/(1-g(1-b))}//Simplify
 {(b+(-1+g) gammaB)/(1+g gammaB),(1+(-1+b) g)/(1+g gammaB)}
 
 
-e.=partialDual[[5]]
+params=partialDual[[5]]
 points=Table[{n,g," ",#[[4]],b/(gammaB+mu)," ", b/(1+gammaB/mu),  #[[5]]," "
 				, #[[5]]/#[[4]],mu , mu/(#[[5]]/#[[4]])
 				}/.params~Select~(#[[1]]==mu&)&@(
