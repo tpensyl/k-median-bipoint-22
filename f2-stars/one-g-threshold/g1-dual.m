@@ -13,7 +13,7 @@ SetOptions[ListPlot3D, AxesLabel->Automatic,
 	BoundaryStyle -> Directive[Black, Thick]];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Description:*)
 
 
@@ -179,19 +179,81 @@ ExtractNonLin[sol_]:=Select[sol,MemberQ[varNonLin,#[[1]]]&]
 createVar[terms__]:=ToExpression@StringJoin@@ToString/@List[terms]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Solving the NLP*)
 
 
 algsI7={8,22,28,29,30,31,32}; (* re-add some algo. Graphically, (with some heuristic), 5(8 now) seems to be the 'most complete' algo to add.*)
 algsI8={4,8,22,28,29,30,31,32};
-algsI7b={4,8,22,29,30,31,32}; (* our in-between wasn't actually special here ; TODO check small and large gammaB*)
+algsI7b={4,8,22,29,30,31,32}; (* our in-between wasn't actually special here *)
 algsI=algsI7b
+ghat=0.6586
 solNLP=SolveNLP[ghat,300,algsI7b]
 
 
 sol=SolveLPatSol[{gammaB->.25,gammaC->.25}~Join~solNLP,algsI7b(*, constrD1D2~Union~constrD1D2g*)];
 Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI7b]}
+
+
+(* ::Subsection:: *)
+(*Result*)
+
+
+(* ::Text:: *)
+(*By setting g=.6586, we get approximation factor 1.31019*)
+(**)
+(*This file uses a minimal set of 7 algos to achieve this. *)
+(**)
+(*I think this NLP could be simplified by padding such that |F2C|=min{|F2B|,|Y|}, to eliminate need for gammaC variable.*)
+
+
+(* ::Section:: *)
+(*Dual*)
+
+
+Protect[u];
+ToDual[algs_,varsD1_,varsD2_]:=Module[{varsU},
+varsU=Table[u[i],{i,1,Length@algs}];
+{{alpha, Join[
+	#<=(1-b)alpha&/@( varsU.Table[Coefficient[alg,var],{alg,algs},{var,varsD1}] ),
+	#<=b*alpha&/@( varsU.Table[Coefficient[alg,var],{alg,algs},{var,varsD2}] ),
+	{Total[varsU]>=1}, #>=0&/@varsU]
+}, varsU~Append~alpha}
+]
+SolveDualLP[nonLinParams_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=Module[{tdual, dualOpt, dualSol},
+	tdual = ToDual[algs[[algI]]~Append~costLiSven,varD1,varD2];
+	{dualOpt, dualSol} = NMinimize[Append[tdual[[1]],constrExtra]/.ExtractNonLin@nonLinParams,tdual[[2]]];
+	dualSol
+]~Join~nonLinParams
+EvaluateAlgs[params_,algIset_:;;]:=Join[
+	{{"u[alg]", "Alg Mass","Alg Index"}},
+	Table[{u[i], Style[algMass,PrintPrecision->2], algIndex}/.algsWithMass[[algIset[[i]]]],{i,1,Length[algIset]}],
+	{{u[7],Style[{a,a,a,b,b,b,b,b,b},PrintPrecision->2]/.{a->1-b},"LS"}}
+]/.params
+
+
+
+SolveDualLP[sol,algsI7b]
+Grid@EvaluateAlgs[%,algsI7b]
+
+
+(* Initialize manipulate *)
+{b0,g0,gammaB0,gammaC0}={b,g,gammaB,gammaC}/.sol;
+
+
+Manipulate[Module[{solDual},
+    {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
+    solDual = SolveDualLP[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg},algsI7b,{u[testi]>=eps1}];
+    Column@{alpha/.solDual, Grid@EvaluateAlgs[solDual,algsI7b]}
+],{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.1,1.5,.001},{{pgammaC,gammaC0},.1,1,.001},{{pg,g0},.01,1,.001}
+   ,{eps1,0,1,.01},{testi,1,8,1}]
+
+
+{b0,gammaB0,gammaC0}={tb,tgammaB,tgammaC} (* optionally persist modifications *)
+
+
+(* ::Section::Closed:: *)
+(*Exploration*)
 
 
 (* ::Subsection::Closed:: *)
@@ -241,24 +303,12 @@ Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 {b0,g0,gammaB0,gammaC0}={b,g,gammaB,gammaC}/.sol;
 
 
-algsI
 Manipulate[Module[{sol2},
 {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
-sol2=SolveLPatSol[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->g0},algsI(*~Union~{6,1,5,27}*),constrD1D2~Union~constrD1D2g];
+sol2 = SolveLPatSol[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->g0},algsI(*~Union~{6,1,5,27}*),constrD1D2~Union~constrD1D2g];
 Column@{Z/.sol2,sol2,EvaluateAlgsByCost[sol2,algsI7b]}
 ],{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.1,1.5,.001},{{pgammaC,gammaC0},.1,1,.001}]
 
 
+
 {b0,gammaB0,gammaC0}={tb,tgammaB,tgammaC} (* persist modifications *)
-
-
-(* ::Subsection:: *)
-(*Result*)
-
-
-(* ::Text:: *)
-(*By setting g=.6586, we get approximation factor 1.31019*)
-(**)
-(*This file uses a minimal set of 7 algos to achieve this. *)
-(**)
-(*I think this NLP could be simplified by padding such that |F2C|=min{|F2B|,|Y|}, to eliminate need for gammaC variable.*)
