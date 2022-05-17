@@ -38,7 +38,7 @@ SetOptions[Plot3D, AxesLabel->Automatic,
 (*	Also, 0 <= \[Gamma]_C <= 1*)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Setting up the NLP:*)
 
 
@@ -86,7 +86,7 @@ massCombos={{0,1,0,1,b,b} (*11: combine 2,5*)
 	,{0,1,1,x,y,y}/.{x->Min[1-g*mu,b/gammaB],y->Max[0,1-mu]}/.{mu->(1-b+gammaB)/(1+g*gammaB)} (* 34: further flatten 30 and 31 TODO handle case when negative*)
 	,{0,1,0,x,y,y}/.{x->1-(1-b)*g/(g*gammaB+1), y->1-(1-b)/(g*gammaB+1)}(* 35: CHEAT,but cost is attainable using multiple algorithms. combine 4,8,22*)
 };
-massLiSven={{1-b,b,1-b,b,b,b}};
+massLiSven={1-b,b,1-b,b,b,b};
 
 
 CheckMass[mass_]:=FullSimplify[{gA,gA,gammaB,gammaB,gammaC,1-gammaC}.(mass-{a,b,a,b,b,b})/.{a->1-b},
@@ -124,15 +124,15 @@ cost[p1a_,p2a_,p1b_,p2b_,p2c_,p2d_] := Total@{
 costLiSven = b*(3-2b)Total[varD2]+(1-b)*Total[varD1];
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Variables and Constraints:*)
 
 
 allMass=Join[massSafe,massbgamma0,massbgamma1,massOnlyC,massCombos];
 algs=Append[cost@@#&/@allMass,costLiSven];
+AppendTo[allMass,massLiSven];
 Length@algs
-algsWithMass=Table[{algCost->cost@@allMass[[i]],algMass->Style[allMass[[i]],PrintPrecision->2],algIndex->i},{i,1,Length[allMass]}];
-AppendTo[algsWithMass,{algCost->costLiSven,algMass->Style[massLiSven[[1]],PrintPrecision->2],algIndex->1+Length[algsWithMass]}];
+algsWithMass=Table[{algCost->algs[[i]],algMass->Style[allMass[[i]],PrintPrecision->2],algIndex->i},{i,1,Length[allMass]}];
 constrAlg = Z<=#&/@algs;
 
 varNonLin={b,g,gammaB,gammaC};
@@ -205,7 +205,7 @@ Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 (*By setting g=.6586, we get approximation factor 1.31019*)
 (**)
 (*This file uses a minimal set of 4? algos+LS to achieve this. *)
-(*One of the three algorithms is infeasible, but I think there should usually exist a convex combination of two(or three?) feasible algorithms which achieve it. (as long as p2b+p2c>=1 - TODO actually for small b this isn't true, so it's probably invalid.)*)
+(*One of the three algorithms is infeasible, but I think there should usually exist a convex combination of two(or three?) feasible algorithms which achieve it. (as long as p2b+p2c>=1 - TODO actually for small b this isn't true - we can we adjust chain such that it is always true.)*)
 (**)
 (*I think this NLP could be simplified by padding such that |F2C|=min{|F2B|,|Y|}, to eliminate need for gammaC variable.*)
 
@@ -253,13 +253,11 @@ algsI=algsI3;
 constrExtra={};
 Manipulate[
     {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
-    msolDual = SolveDualLP[{b->pb,gammaB->pgammaB,gammaC->Min[1,pgammaB],g->pg},algsI(*,{u[i1]>=eps1}*)];
-	mtmp=Total[u[#]*allMass[[algsI[[#]]]]&/@{i1,i2,3}]/Total[u[#]&/@{i1,i2,3}] /.msolDual;
-    BigFractionStyle@Column@{alpha/.msolDual, Grid@EvaluateDual[msolDual,algsI],
-	(* What mass would be needed to combine first and second algos *)
-	mtmp, mtmp[[5]]/mtmp[[4]],{algsI[[i2]],algsI[[i1]]},1/2(1+1/g)}/.msolDual
+    msolDual = SolveDualLP[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg},algsI(*,{u[i1]>=eps1}*)];
+	mCombo=Total[u[#]*allMass[[algsI[[#]]]]&/@{i1,i2}]/Total[u[#]&/@{i1,i2}] /.msolDual;
+    BigFractionStyle@Column@{alpha, Grid@EvaluateDual[msolDual,algsI],{"i1/i2 combo", mCombo}}/.msolDual
    ,{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.01,1.5,.001},{{pgammaC,gammaC0},.01,1,.001},{{pg,g0},.01,1,.001}
-   ,{eps1,0,1,.01},{i1,1,Length@algsI,1},{i2,1,Length@algsI,1}]
+   ,{eps1,0,1,.01},{i1,1,Length@algsI,1},{i2,2,Length@algsI,1}]
 
 
 {b0,gammaB0,gammaC0}={tb,tgammaB,tgammaC} (* optionally persist modifications *)
@@ -303,7 +301,9 @@ BigFractionStyle@Grid@points;
 (*Automate rational form-finding*)
 
 
-Clear[MergeAlgos]
+(* Example: here we parameterized terms have combined algorithms, in terms of gammaB.
+   We can then follow up and look in terms of g and b, and try to combine them *)
+(* TODO taken the parameters as an argument, with the ability to template out variable; maybe even specify range *)
 MergeAlgos[algsII_List, form_]:=Module[{data},
 	data=Transpose@Table[Prepend[#,gammaB]&@(
 		Total[u[#]*allMass[[algsI[[#]]]]&/@algsII] / Total[u[#]&/@algsII]
@@ -313,17 +313,7 @@ MergeAlgos[algsII_List, form_]:=Module[{data},
 		form/.Solve@MapThread[#2==form/.{gammaB->#1}&,{data[[1]],yRow}]
 	,"WRONG FORM"][[1]] ,{yRow,data}]
 ]
-MergeAlgos[{1,2,3},(a+b*x+c*x^2)/(1+d*x+e*x^2)/.{x->gammaB}]
-
-
-data=Transpose@Table[Prepend[#,gammaB]&@(
-		Total[u[#]*allMass[[algsI[[#]]]]&/@{1,2}] / Total[u[#]&/@{1,2}]
-	)/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->2/3,gammaB->n/12,g->1/2} ],algsI]
-,{n,1,11}];
-form=(a+b*x+c*x^2)/(16+d*x+e*x^2)/.{x->gammaB};
-Column@Table[ Simplify@Append[
-		form/.Solve@MapThread[#2==form/.{gammaB->#1}&,{data[[1]],yRow}]
-	,"WRONG FORM"][[1]] ,{yRow,data}]
+MergeAlgos[{1,2,3,4},(a+b*x+c*x^2)/(1+d*x+e*x^2)/.{x->gammaB}]
 
 
 (* ::Subsubsection::Closed:: *)
