@@ -11,29 +11,27 @@ SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->9]
 (*Generating Algorithms*)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Create Variables and Mass Equation*)
 
 
 createVar[symb_,num_]:=ToExpression[symb<>ToString[num]];
-createVarAB[symb_,grp1_,num1_,grp2_,num2_]:=ToExpression[symb<>grp1<>ToString[num1]<>grp2<>ToString[num2]];
 
-initialize[t_] := (
+initialize[t_]:=(
 	n = t+1;
-	inds = Range[n];
-	gammaAs = createVar@@#&/@({"gammaA",#}&/@inds);
-	gammaCs = createVar@@#&/@({"gammaC",#}&/@inds);
+	gammaAs = Table[createVar["gammaA",i],{i,1,n}];
+	gammaCs = Table[createVar["gammaC",i],{i,1,n}];
 	gammaCs = gammaCs/.{gammaC1->1-Total[gammaCs[[2;;]]]};
-	pAs = createVar@@#&/@({"pA",#}&/@inds);
-	pBs = createVar@@#&/@({"pB",#}&/@inds);
-	pCs = createVar@@#&/@({"pC",#}&/@inds);
+	pAs = Table[createVar["pA",i],{i,1,n}];
+	pBs = Table[createVar["pB",i],{i,1,n}];
+	pCs = Table[createVar["pC",i],{i,1,n}];
 	varp = Union[pAs,pBs,pCs];
-	cond = Union[{0<b<1},0<#<1&/@gammaCs,0<=#<=1&/@varp,MapThread[#1<=#2&,{gammaCs[[2;;]],gammaAs[[2;;]]}],#->Real&/@gammaAs];
+	cond = Union[{0<b<1},0<#<1&/@gammaCs,0<=#<=1&/@varp,MapThread[#1<=#2&,{gammaCs[[2;;]],gammaAs[[2;;]]}]];
 	massExpr= Total[MapThread[(#1+#2)#3&,{pAs,pBs,gammaAs}]]+Total[MapThread[#1*#2&,{pCs,gammaCs}]]-Total[gammaAs]-b == 0;
 );
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Generate Valid Base Algorithms*)
 
 
@@ -75,7 +73,7 @@ getValidAlgos:=Module[{ds,curr,w,i,curMass,res,val,numer,denom,w1,w2},
 ];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Generating All Chains*)
 
 
@@ -115,7 +113,7 @@ getConstraints[ds_]:=Module[{indices,combs,output,i,rem,perms,i0,j,out1,w,algo,i
 ];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Generate Minimal Set of Chains*)
 
 
@@ -182,11 +180,12 @@ Print[Length[reducedMass]];
 
 massFile = FileNameJoin[{NotebookDirectory[], "One-g-mass-"<>ToString[Length[mass]]<>".wl"}]
 reducedMassFile = FileNameJoin[{NotebookDirectory[], "One-g-reduced-mass-"<>ToString[Length[reducedMass]]<>".wl"}]
-Save[massFile,mass];
-Save[reducedMassFile,reducedMass];
+DeleteFile[massFile];DeleteFile[reducedMassFile];
+Save[massFile,{mass}];
+Save[reducedMassFile,{reducedMass}];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Two g-thresholds (t=2)*)
 
 
@@ -213,11 +212,12 @@ Print[Length[reducedMass]];
 
 massFile = FileNameJoin[{NotebookDirectory[], "Two-g-mass-"<>ToString[Length[mass]]<>".wl"}]
 reducedMassFile = FileNameJoin[{NotebookDirectory[], "Two-g-reduced-mass-"<>ToString[Length[reducedMass]]<>".wl"}]
+DeleteFile[massFile];DeleteFile[reducedMassFile];
 Save[massFile,mass];
 Save[reducedMassFile,reducedMass];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Three g-thresholds (t=3)*)
 
 
@@ -238,11 +238,16 @@ reducedMass = reduceConstraints[constraints,mass];
 Print[Length[reducedMass]];
 
 
+
+
+
+
 (* ::Subsubsection:: *)
 (*Saving mass and reducedMass*)
 
 
 massFile = FileNameJoin[{NotebookDirectory[], "Three-g-mass-"<>ToString[Length[mass]]<>".wl"}]
 reducedMassFile = FileNameJoin[{NotebookDirectory[], "Three-g-reduced-mass-"<>ToString[Length[reducedMass]]<>".wl"}]
+(*DeleteFile[massFile];*)DeleteFile[reducedMassFile];
 (*Save[massFile,mass];*)
 Save[reducedMassFile,reducedMass];

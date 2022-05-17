@@ -11,24 +11,24 @@ SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->9]
 (*Setting up the NLP:*)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Creating Variables*)
 
 
 createVar[symb_,num_]:=ToExpression[symb<>ToString[num]];
 createVarAB[symb_,grp1_,num1_,grp2_,num2_]:=ToExpression[symb<>grp1<>ToString[num1]<>grp2<>ToString[num2]];
+(*createVar[terms_]:=ToExpression@StringJoin@@ToString/@List[terms]*)
 
 initialize[t_] := (
 	n = t+1;
-	inds = Range[n];
-	gammaAs = createVar@@#&/@({"gammaA",#}&/@inds);
-	gammaCs = createVar@@#&/@({"gammaC",#}&/@inds);
+	gammaAs = Table[createVar["gammaA",i],{i,1,n}];
+	gammaCs = Table[createVar["gammaC",i],{i,1,n}];
 	gammaCs = gammaCs/.{gammaC1->1-Total[gammaCs[[2;;]]]};
 	cond = Union[{0<=b<=1},0<=#<=1&/@gammaCs,MapThread[#1<=#2&,{gammaCs[[2;;]],gammaAs[[2;;]]}]];
 );
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Client Costs*)
 
 
@@ -47,7 +47,7 @@ cost[ps_]:= (
 );
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Get Algorithms*)
 
 
@@ -57,7 +57,7 @@ Get[FileNameJoin[{NotebookDirectory[], "One-g-reduced-mass-22.wl"}]];
 Get[FileNameJoin[{NotebookDirectory[], "Two-g-reduced-mass-166.wl"}]];*)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Variables and Constraints:*)
 
 
@@ -65,11 +65,11 @@ t = 1;
 initialize[t];
 
 
-pairs= Flatten[Outer[Pair,Range[n],Range[n]],1];
+pairs  = Flatten[Outer[Pair,Range[n],Range[n]],1];
 varDAB = createVarAB["d1","A",#[[1]],"B",#[[2]]]&/@pairs;
 varDAC = createVarAB["d1","A",#[[1]],"C",#[[2]]]&/@pairs;
-varDB = createVarAB["d2","A",#[[1]],"B",#[[2]]]&/@pairs;
-varDC = createVarAB["d2","A",#[[1]],"C",#[[2]]]&/@pairs;
+varDB  = createVarAB["d2","A",#[[1]],"B",#[[2]]]&/@pairs;
+varDC  = createVarAB["d2","A",#[[1]],"C",#[[2]]]&/@pairs;
 
 
 Length@reducedMass
@@ -94,12 +94,11 @@ algsI=Range[Length[reducedMass]];
 Length@algsI
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Define NLP*)
 
 
-hints1 = Join[{.3 <= b <= .8, .01 <= gammaA2 <= .99, X>=.5, (* manual hints *)
-		.01<=gammaC2<=.99, .01<=gammaC2(* hints *)}];
+hints1=Join[{.3 <= b <= .8, .01 <= gammaA2 <= .99, X>=.5,.01<=gammaC2<=.99(* hints *)}];
 gs = {g1};
 
 
@@ -111,7 +110,7 @@ SolveNLP[ghats_,iter_,hints_,algI_:;;]:=
 (*SolveNLP[g1hat,g2hat,100]*)
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Result*)
 
 
@@ -120,6 +119,9 @@ Length@algsI
 {g1hat}
 sol=SolveNLP[{g1hat},1000,hints1,algsI]
 (*SolveLPatSol[sol,algsI]*)
+
+
+
 
 
 
