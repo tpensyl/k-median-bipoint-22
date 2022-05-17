@@ -42,7 +42,7 @@ SetOptions[Plot3D, AxesLabel->Automatic,
 (*Setting up the NLP:*)
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Probability Mass*)
 
 
@@ -86,6 +86,7 @@ massCombos={{0,1,0,1,b,b} (*11: combine 2,5*)
 	,{0,1,1,x,y,y}/.{x->Min[1-g*mu,b/gammaB],y->Max[0,1-mu]}/.{mu->(1-b+gammaB)/(1+g*gammaB)} (* 34: further flatten 30 and 31 TODO handle case when negative*)
 	,{0,1,0,x,y,y}/.{x->1-(1-b)*g/(g*gammaB+1), y->1-(1-b)/(g*gammaB+1)}(* 35: CHEAT,but cost is attainable using multiple algorithms. combine 4,8,22*)
 };
+massLiSven={{1-b,b,1-b,b,b,b}};
 
 
 CheckMass[mass_]:=FullSimplify[{gA,gA,gammaB,gammaB,gammaC,1-gammaC}.(mass-{a,b,a,b,b,b})/.{a->1-b},
@@ -128,9 +129,10 @@ costLiSven = b*(3-2b)Total[varD2]+(1-b)*Total[varD1];
 
 
 allMass=Join[massSafe,massbgamma0,massbgamma1,massOnlyC,massCombos];
-Length@allMass
-algs=cost@@#&/@allMass;
+algs=Append[cost@@#&/@allMass,costLiSven];
+Length@algs
 algsWithMass=Table[{algCost->cost@@allMass[[i]],algMass->Style[allMass[[i]],PrintPrecision->2],algIndex->i},{i,1,Length[allMass]}];
+AppendTo[algsWithMass,{algCost->costLiSven,algMass->Style[massLiSven[[1]],PrintPrecision->2],algIndex->1+Length[algsWithMass]}];
 constrAlg = Z<=#&/@algs;
 
 varNonLin={b,g,gammaB,gammaC};
@@ -140,7 +142,6 @@ constrD1D2=MapThread[#1<=#2&,{varD2,varD1}];
 constrD1D2g=MapThread[#1+g(#1+#2)>=#2+(#1+#2)&,{{d1ac, d1ad},{d2ac, d2ad}}];
 constrBasic = Join[{Z>=0,0<=b<=1,0<=gammaB,0<=gammaC<=1,gammaC<=gammaB},#>=0&/@Union[varD1,varD2]
         ,{Total[varD1]*(1-b)+Total[varD2]*b==1}];
-constrAlgLiSven = Z<=costLiSven;
 
 
 (* ::Subsection::Closed:: *)
@@ -162,14 +163,14 @@ EquationQ[eq_]:=Not@FreeQ[eq,(Equal|LessEqual|Less|Greater|GreaterEqual)]||eq (*
 
 (* We will fix the value of g, and let the adversary set the mass variable gamma *)
 SolveNLP[g1hat_,iter_,algI_,constrExtra_:{}]:=
-	NMaximize[{Z, constrAlg[[algI]], constrBasic, constrAlgLiSven, g==g1hat, constrExtra,
+	NMaximize[{Z, constrAlg[[algI]], constrBasic, g==g1hat, constrExtra,
 		.6 <= b <= .7, .1 <= gammaB, .1 <= gammaC <= .9 (* manual hints. some problems with gamma12->0, but also maybe valid *)
 	}, vars~Union~{g}, MaxIterations->iter][[2]]
 SolveNLP[g1hat_,iter_,algI_:;;]:=SolveNLP[g1hat,iter,algI,{}]
 
 (* If we fix non-linear variables, remaining system is linear and very fast/accurate *)
 SolveLP[nonLinParams_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=
-	NMaximize[{Z, constrAlg[[algI]], constrBasic, constrAlgLiSven, constrExtra}/.nonLinParams,
+	NMaximize[{Z, constrAlg[[algI]], constrBasic, constrExtra}/.nonLinParams,
 		Union[varD1,varD2,{Z}]][[2]]~Join~nonLinParams;
 SolveLPatSol[fullSol_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=SolveLP[ExtractNonLin[fullSol], algI,constrExtra]
 ExtractNonLin[sol_]:=Select[sol,MemberQ[varNonLin,#[[1]]]&]
@@ -181,19 +182,19 @@ createVar[terms__]:=ToExpression@StringJoin@@ToString/@List[terms]
 (*Solving the NLP*)
 
 
-algsI7={8,22,28,29,30,31,32}; (* re-add some algo. Graphically, (with some heuristic), 5(8 now) seems to be the 'most complete' algo to add.*)
-algsI8={4,8,22,28,29,30,31,32};
-algsI7b={4,8,22,29,30,31,32}; (* our in-between wasn't actually special here *)
-algsI6b={4,8,22,30,31,33};
-algsI5={4,8,22,33,34};
-algsI3={33,34,35};
+algsI7={-1,8,22,28,29,30,31,32}; (* re-add some algo. Graphically, (with some heuristic), 5(8 now) seems to be the 'most complete' algo to add.*)
+algsI8={-1,4,8,22,28,29,30,31,32};
+algsI7b={-1,4,8,22,29,30,31,32}; (* our in-between wasn't actually special here *)
+algsI6b={-1,4,8,22,30,31,33};
+algsI5={-1,4,8,22,33,34};
+algsI3={-1,33,34,35};
 algsI=algsI3
 ghat=0.6586
 solNLP=SolveNLP[ghat,300,algsI]
 
 
-sol=SolveLPatSol[solNLP,algsI5(*, constrD1D2~Union~constrD1D2g*)];
-Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI5]}
+sol=SolveLPatSol[solNLP,algsI(*, constrD1D2~Union~constrD1D2g*)];
+Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
 (* ::Subsection:: *)
@@ -223,14 +224,13 @@ varsU=Table[u[i],{i,1,Length@algs}];
 }, varsU~Append~alpha}
 ]
 SolveDualLP[nonLinParams_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=Module[{tdual, dualOpt, dualSol},
-	tdual = ToDual[algs[[algI]]~Append~costLiSven,varD1,varD2];
+	tdual = ToDual[algs[[algI]],varD1,varD2];
 	{dualOpt, dualSol} = Minimize[Append[tdual[[1]],constrExtra]/.ExtractNonLin@nonLinParams,tdual[[2]]];
 	dualSol
 ]~Join~nonLinParams
 EvaluateDual[params_,algIset_:;;]:=Join[
 	{{"u[alg]", "Alg Mass","Alg Index"}},
-	Table[{u[i], Style[algMass,PrintPrecision->2], algIndex}/.algsWithMass[[algIset[[i]]]],{i,1,Length[algIset]}],
-	{{u[Length@algIset+1],Style[{a,a,a,b,b,b,b,b,b},PrintPrecision->2]/.{a->1-b},"LS"}}
+	Table[{u[i], Style[algMass,PrintPrecision->2], algIndex}/.algsWithMass[[algIset[[i]]]],{i,1,Length[algIset]}]
 ]/.params
 
 
@@ -303,27 +303,17 @@ BigFractionStyle@Grid@points;
 (*Automate rational form-finding*)
 
 
-Clear[Foo]
-Foo[algsII_List, x_]:=Module[{data},
-	data=Prepend[{rawr},#]&@(
-		Total[u[#]*#&/@algsII] / Total[u[#]&/@algsII]+y
-	)/.{y->3};
-	data]
-Foo[3,4]
-Foo[{3,4},5]
-
-
 Clear[MergeAlgos]
-MergeAlgos[algsII_List, form_]=Module[{data},
+MergeAlgos[algsII_List, form_]:=Module[{data},
 	data=Transpose@Table[Prepend[#,gammaB]&@(
-		Total[u[#]*allMass[[algsI[[#]]]]&/@{1,2}] / Total[u[#]&/@algsII]
+		Total[u[#]*allMass[[algsI[[#]]]]&/@algsII] / Total[u[#]&/@algsII]
 	)/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->2/3,gammaB->n/12,g->1/2} ],algsI]
 	,{n,1,11}];
 	Column@Table[ Simplify@Append[
 		form/.Solve@MapThread[#2==form/.{gammaB->#1}&,{data[[1]],yRow}]
 	,"WRONG FORM"][[1]] ,{yRow,data}]
 ]
-MergeAlgos[1,(a+b*x+c*x^2)/(1+d*x+e*x^2)/.{x->gammaB}]
+MergeAlgos[{1,2,3},(a+b*x+c*x^2)/(1+d*x+e*x^2)/.{x->gammaB}]
 
 
 data=Transpose@Table[Prepend[#,gammaB]&@(
@@ -336,7 +326,7 @@ Column@Table[ Simplify@Append[
 	,"WRONG FORM"][[1]] ,{yRow,data}]
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Explore DUAL - combining the F1=0 cases*)
 
 
