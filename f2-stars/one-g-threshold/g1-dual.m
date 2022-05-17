@@ -8,9 +8,6 @@ SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->8]
 SetOptions[Plot3D, AxesLabel->Automatic,
 	PlotStyle->Opacity[.7], ClippingStyle->None,
 	BoundaryStyle -> Directive[Black, Thick]];
-SetOptions[ListPlot3D, AxesLabel->Automatic,
-	PlotStyle->Opacity[.7], ClippingStyle->None,
-	BoundaryStyle -> Directive[Black, Thick]];
 
 
 (* ::Subsection::Closed:: *)
@@ -80,13 +77,14 @@ massbgamma1={{1,0,0,x,y1,z1},{1,0,x,0,y1,z1},{0,1,0,x,y1,z1},{0,1,x,0,y1,z1},
 massOnlyC={{1,0,x,y,1,z},{0,1,x,y,1,z},{1,0,y,x,1,z},{0,1,y,x,1,z}}/.{
 	x->Max[Min[1,(b-gammaC)/gammaB],0], y->Min[Max[0,1-(gammaC-b)/gammaB],1],z->Max[0,(b-gammaB-gammaC)/(1-gammaC)]};
 massCombos={{0,1,0,1,b,b} (*11: combine 2,5*)
-			,{1,0,1,0,b,b} (*29 combine 1,3*)
-			,{0,1,1,0,b,b} (*30: flatten 4*)
-            ,{0,1,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*31: flatten 7*)
-            ,{1,0,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*32: flatten 6*)
-			(*{0,1,0,y,x,x}/.{x->Min[1,b+gammaB],y->Max[0,1-(1-b)/gammaB]}*)(*flatten 9, but this is cheating *)
-			,{1,0,1,x,mu*x,mu*x}/.{x->b/(gammaB+mu)}/.{mu->1/2(1+1/g)} (* 33: further flatten 29 and 32 *)
-			,{0,1,1,x,y,y}/.{x->1-g*mu,y->1-mu}/.{mu->(1-b+gammaB)/(1+g*gammaB)} (* 34 futher flatten 30 and 31 *)
+	,{1,0,1,0,b,b} (*29 combine 1,3*)
+	,{0,1,1,0,b,b} (*30: flatten 4*)
+    ,{0,1,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*31: flatten 7*)
+    ,{1,0,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*32: flatten 6*)
+	(*{0,1,0,y,x,x}/.{x->Min[1,b+gammaB],y->Max[0,1-(1-b)/gammaB]}*)(*flatten 9, but this is cheating *)
+	,{1,0,1,x,mu*x,mu*x}/.{x->b/(gammaB+mu)}/.{mu->1/2(1+1/g)} (* 33: further flatten 29 and 32 *)
+	,{0,1,1,x,y,y}/.{x->Min[1-g*mu,b/gammaB],y->Max[0,1-mu]}/.{mu->(1-b+gammaB)/(1+g*gammaB)} (* 34: further flatten 30 and 31 TODO handle case when negative*)
+	,{0,1,0,x,y,y}/.{x->1-(1-b)*g/(g*gammaB+1), y->1-(1-b)/(g*gammaB+1)}(* 35: CHEAT,but cost is attainable using multiple algorithms. combine 4,8,22*)
 };
 
 
@@ -140,7 +138,8 @@ vars=Union[varD1,varD2,varNonLin,{Z}];
 
 constrD1D2=MapThread[#1<=#2&,{varD2,varD1}];
 constrD1D2g=MapThread[#1+g(#1+#2)>=#2+(#1+#2)&,{{d1ac, d1ad},{d2ac, d2ad}}];
-constrBasic = Join[{Z>=0,0<=b<=1,0<=gammaB,0<=gammaC<=1,gammaC<=gammaB},#>=0&/@Union[varD1,varD2],{Total[varD1]*(1-b)+Total[varD2]*b==1}];
+constrBasic = Join[{Z>=0,0<=b<=1,0<=gammaB,0<=gammaC<=1,gammaC<=gammaB},#>=0&/@Union[varD1,varD2]
+        ,{Total[varD1]*(1-b)+Total[varD2]*b==1}];
 constrAlgLiSven = Z<=costLiSven;
 
 
@@ -187,7 +186,8 @@ algsI8={4,8,22,28,29,30,31,32};
 algsI7b={4,8,22,29,30,31,32}; (* our in-between wasn't actually special here *)
 algsI6b={4,8,22,30,31,33};
 algsI5={4,8,22,33,34};
-algsI=algsI5
+algsI3={33,34,35};
+algsI=algsI3
 ghat=0.6586
 solNLP=SolveNLP[ghat,300,algsI]
 
@@ -203,7 +203,8 @@ Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI5]}
 (* ::Text:: *)
 (*By setting g=.6586, we get approximation factor 1.31019*)
 (**)
-(*This file uses a minimal set of 5 algos to achieve this. *)
+(*This file uses a minimal set of 4? algos+LS to achieve this. *)
+(*One of the three algorithms is infeasible, but I think there should usually exist a convex combination of two(or three?) feasible algorithms which achieve it. (as long as p2b+p2c>=1 - TODO actually for small b this isn't true, so it's probably invalid.)*)
 (**)
 (*I think this NLP could be simplified by padding such that |F2C|=min{|F2B|,|Y|}, to eliminate need for gammaC variable.*)
 
@@ -234,7 +235,7 @@ EvaluateDual[params_,algIset_:;;]:=Join[
 
 
 
-algsI=algsI7b
+algsI=algsI3
 solDual=SolveDualLP[sol,algsI]
 Grid@EvaluateDual[%,algsI] 
 
@@ -248,7 +249,7 @@ Grid@EvaluateDual[%,algsI]
 
 
 BigFractionStyle = Style[#, DefaultOptions -> {FractionBoxOptions -> {AllowScriptLevelChange -> False}}] &;
-algsI=algsI5
+algsI=algsI3;
 constrExtra={};
 Manipulate[
     {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
@@ -264,6 +265,77 @@ Manipulate[
 {b0,gammaB0,gammaC0}={tb,tgammaB,tgammaC} (* optionally persist modifications *)
 
 
+(* ::Subsubsection::Closed:: *)
+(*Exact Rational Form (manual)*)
+
+
+BigFractionStyle = Style[#, DefaultOptions -> {FractionBoxOptions -> {AllowScriptLevelChange -> False}}] &;
+algsI=algsI3
+constrExtra={};
+Manipulate[
+    {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
+    msolDual = SolveDualLP[{b->pb,gammaB->pgammaB,gammaC->Min[1,pgammaB],g->pg},algsI(*,{u[i1]>=eps1}*)];
+	mtmp=Total[u[#]*allMass[[algsI[[#]]]]&/@{i1,i2}]/Total[u[#]&/@{i1,i2}] /.msolDual;
+    BigFractionStyle@Column@{N[alpha/.msolDual], Grid@EvaluateDual[msolDual,algsI],
+	(* What mass would be needed to combine first and second algos *)
+	mtmp, {algsI[[i2]],algsI[[i1]]}}/.msolDual
+   (*,{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.01,1.5,.001},{{pgammaC,gammaC0},.01,1,.001},{{pg,g0},.01,1,.001}*)
+	,{{pb,2/3},0/60,1,1/12},{{pgammaB,2/3},0/60,1,1/12},{{pg,1/2},0/60,1,1/12}
+   ,{eps1,0,1,.01},{i1,1,Length@algsI,1},{i2,2,Length@algsI,1}];
+
+
+(* start figuring out form of solutions by hand, looking for patterns *)
+partialDual33to34={
+	 {b->1/2, g->1/2, p2cd->(144+12*gammaB*15)/(288+51*12*gammaB+2*144*gammaB^2),
+					p2b->(126+12*gammaB*12)/(288+51*12*gammaB+2*144*gammaB^2)}
+}
+params=partialDual33to34[[1]]
+points=Table[{n,gammaB," ",#[[4]],p2b," "
+                          ,#[[5]],p2cd," "
+				}/.params&@(
+		Total[u[#]*allMass[[algsI[[#]]]]&/@{1,2}] / Total[u[#]&/@{1,2}]
+	)/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ params~Join~{b->2/3.,gammaB->n/12,g->1/2.} ],algsI]
+,{n,1,11}];
+BigFractionStyle@Grid@points;
+
+
+(* ::Subsubsection:: *)
+(*Automate rational form-finding*)
+
+
+Clear[Foo]
+Foo[algsII_List, x_]:=Module[{data},
+	data=Prepend[{rawr},#]&@(
+		Total[u[#]*#&/@algsII] / Total[u[#]&/@algsII]+y
+	)/.{y->3};
+	data]
+Foo[3,4]
+Foo[{3,4},5]
+
+
+Clear[MergeAlgos]
+MergeAlgos[algsII_List, form_]=Module[{data},
+	data=Transpose@Table[Prepend[#,gammaB]&@(
+		Total[u[#]*allMass[[algsI[[#]]]]&/@{1,2}] / Total[u[#]&/@algsII]
+	)/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->2/3,gammaB->n/12,g->1/2} ],algsI]
+	,{n,1,11}];
+	Column@Table[ Simplify@Append[
+		form/.Solve@MapThread[#2==form/.{gammaB->#1}&,{data[[1]],yRow}]
+	,"WRONG FORM"][[1]] ,{yRow,data}]
+]
+MergeAlgos[1,(a+b*x+c*x^2)/(1+d*x+e*x^2)/.{x->gammaB}]
+
+
+data=Transpose@Table[Prepend[#,gammaB]&@(
+		Total[u[#]*allMass[[algsI[[#]]]]&/@{1,2}] / Total[u[#]&/@{1,2}]
+	)/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->2/3,gammaB->n/12,g->1/2} ],algsI]
+,{n,1,11}];
+form=(a+b*x+c*x^2)/(16+d*x+e*x^2)/.{x->gammaB};
+Column@Table[ Simplify@Append[
+		form/.Solve@MapThread[#2==form/.{gammaB->#1}&,{data[[1]],yRow}]
+	,"WRONG FORM"][[1]] ,{yRow,data}]
+
+
 (* ::Subsubsection:: *)
 (*Explore DUAL - combining the F1=0 cases*)
 
@@ -275,8 +347,9 @@ Manipulate[
     {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
     msolDual = SolveDualLP[{b->pb,gammaB->pgammaB,gammaC->Min[1,pgammaB],g->pg},algsI(*,{u[i1]>=eps1}*)];
 	mtmp=Total[u[#]*allMass[[algsI[[#]]]]&/@{i1,i2,3}]/Total[u[#]&/@{i1,i2,3}] /.msolDual;
-    BigFractionStyle@Column@{alpha/.msolDual, Grid@EvaluateDual[msolDual,algsI],
+    BigFractionStyle@Column@{N[alpha/.msolDual], Grid@EvaluateDual[msolDual,algsI],
 	(* What mass would be needed to combine first and second algos *)
+	{1 - (1-b)*g/(g*gammaB+1), 1 - (1-b)/(g*gammaB+1)},
 	mtmp, mtmp[[5]]/mtmp[[4]],{algsI[[i2]],algsI[[i1]]},1/2(1+1/g)}/.msolDual
    (*,{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.01,1.5,.001},{{pgammaC,gammaC0},.01,1,.001},{{pg,g0},.01,1,.001}*)
 	,{{pb,2/3},0/60,1,1/12},{{pgammaB,2/3},0/60,1,1/12},{{pg,1/2},0/60,1,1/12}
@@ -285,10 +358,16 @@ Manipulate[
 
 Protect[mu1,mu2]
 partialDual2={
-	 {b->2/3, g->1/2, mu1->(3 gammaB+5)/(3 gammaB+6),mu2->(3 gammaB+4)/(3 gammaB+6)}
-	,{b->2/3, g->2/3, mu1->(3 gammaB+5)/(3 gammaB+6),mu2->(3 gammaB+4)/(3 gammaB+6)}
+	 {mu1->1 - (1-b)*g/(g*gammaB+1), mu2->1 - (1-b)/(g*gammaB+1)}
+	,{b->1/2, mu1->1 - 1/2 * g/(g*gammaB+1), mu2->1 - 1/2 * 1/(g*gammaB+1)}
+	,{b->2/3, mu1->1 - 1/3 * g/(g*gammaB+1), mu2->1 - 1/3 * 1/(g*gammaB+1)}
+	,{b->2/3, mu1->1 - 4/(12gammaB+12/g), mu2->1 - 48/(12g)/(12gammaB+12/g)}
+	,{b->2/3, g->3/12, mu1->1 - 4/(12gammaB+48), mu2->1 - 16/(12gammaB+48)}
+	,{b->2/3, g->4/12, mu1->1 - 4/(12gammaB+36), mu2->1 - 12/(12gammaB+36)}
+	,{b->2/3, g->6/12, mu1->1 - 4/(12gammaB+24), mu2->1 - 8/(12gammaB+24)}
+	,{b->2/3, g->8/12, mu1->1 - 4/(12gammaB+18), mu2->1 - 6/(12gammaB+18)}
 };
-params=partialDual2[[2]]
+params=partialDual2[[1]]
 points=Table[{n,gammaB," ",#[[4]],mu1," "
                           ,#[[5]],mu2," "
 				}/.params~Select~(MemberQ[{mu1,mu2},#[[1]]]&)&@(
@@ -298,7 +377,7 @@ points=Table[{n,gammaB," ",#[[4]],mu1," "
 BigFractionStyle@Grid@points
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Explore TOOL - combining 30 and 31*)
 
 
