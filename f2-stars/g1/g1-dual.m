@@ -42,7 +42,7 @@ SetOptions[Plot3D, AxesLabel->Automatic,
 (*Setting up the NLP:*)
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Probability Mass*)
 
 
@@ -89,22 +89,12 @@ massCombos={{0,1,0,1,b,b} (*11: combine 2,5*)
 massLiSven={1-b,b,1-b,b,b,b};
 
 
-{1,0,1,x,mu*x,mu*x}/.{x->b/(gammaB+mu)}/.{mu->1/2(1+1/g)}//Simplify
-{0,1,1,x,y,y}/.{x->Min[1-g*mu,b/gammaB],y->Max[0,1-mu]}/.{mu->(1-b+gammaB)/(1+g*gammaB)}//Simplify
-{0,1,0,x,y,y}/.{x->1-(1-b)*g/(g*gammaB+1), y->1-(1-b)/(g*gammaB+1)}//Simplify
-
-
-(* ::InheritFromParent:: *)
-(*{x->Min[b/gammaB,(1+(-1+b) g)/(1+g gammaB)],y->Max[0,(b+(-1+g) gammaB)/(1+g gammaB)]}*)
-(*{x->1-(1-b)*g/(g*gammaB+1), y->1-(1-b)/(g*gammaB+1)}*)
-
-
 CheckMass[mass_]:=FullSimplify[{gA,gA,gammaB,gammaB,gammaC,1-gammaC}.(mass-{a,b,a,b,b,b})/.{a->1-b},
 	{0<b<1,0<gammaB<1}]
 CheckMass/@massCombos (* check if the mass balances; it should equal zero *)
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Client Costs*)
 
 
@@ -188,7 +178,7 @@ ExtractNonLin[sol_]:=Select[sol,MemberQ[varNonLin,#[[1]]]&]
 createVar[terms__]:=ToExpression@StringJoin@@ToString/@List[terms]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Solving the NLP*)
 
 
@@ -203,8 +193,8 @@ ghat=0.6586
 solNLP=SolveNLP[ghat,300,algsI]
 
 
-sol=SolveLPatSol[solNLP,algsI7b(*, constrD1D2~Union~constrD1D2g*)];
-Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI7]}
+sol=SolveLPatSol[solNLP,algsI(*, constrD1D2~Union~constrD1D2g*)];
+Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
 (* ::Subsection:: *)
@@ -244,6 +234,7 @@ EvaluateDual[params_,algIset_:;;]:=Join[
 ]/.params
 
 
+
 algsI=algsI3
 solDual=SolveDualLP[sol,algsI]
 Grid@EvaluateDual[%,algsI] 
@@ -258,23 +249,15 @@ Grid@EvaluateDual[%,algsI]
 
 
 BigFractionStyle = Style[#, DefaultOptions -> {FractionBoxOptions -> {AllowScriptLevelChange -> False}}] &;
-algsI=algsI8
-algsI={-1,2,6,4,8,22,28,29,31,32};
-algsI=algsI3
+algsI=algsI3;
 constrExtra={};
 Manipulate[
     {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
     msolDual = SolveDualLP[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg},algsI(*,{u[i1]>=eps1}*)];
-	mCombo=Total[u[#]*allMass[[algsI[[#]]]]&/@{2,3,4}]/Total[u[#]&/@{2,3,4}] /.msolDual;
+	mCombo=Total[u[#]*allMass[[algsI[[#]]]]&/@{i1,i2}]/Total[u[#]&/@{i1,i2}] /.msolDual;
     BigFractionStyle@Column@{alpha, Grid@EvaluateDual[msolDual,algsI],{"i1/i2 combo", mCombo}}/.msolDual
    ,{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.01,1.5,.001},{{pgammaC,gammaC0},.01,1,.001},{{pg,g0},.01,1,.001}
    ,{eps1,0,1,.01},{i1,1,Length@algsI,1},{i2,2,Length@algsI,1}]
-
-
-u1,u2
-p=u1/(u1+u2) run alg 1
-p=u2/(u1+u2) run alg 2
-
 
 
 {b0,gammaB0,gammaC0}={tb,tgammaB,tgammaC} (* optionally persist modifications *)
@@ -296,7 +279,7 @@ Manipulate[
 	mtmp, {algsI[[i2]],algsI[[i1]]}}/.msolDual
    (*,{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.01,1.5,.001},{{pgammaC,gammaC0},.01,1,.001},{{pg,g0},.01,1,.001}*)
 	,{{pb,2/3},0/60,1,1/12},{{pgammaB,2/3},0/60,1,1/12},{{pg,1/2},0/60,1,1/12}
-   ,{eps1,0,1,.01},{i1,1,Length@algsI,1},{i2,2,Length@algsI,1}]
+   ,{eps1,0,1,.01},{i1,1,Length@algsI,1},{i2,2,Length@algsI,1}];
 
 
 (* start figuring out form of solutions by hand, looking for patterns *)
@@ -318,26 +301,19 @@ BigFractionStyle@Grid@points;
 (*Automate rational form-finding*)
 
 
-i=2
-uu[1]=3
-uu[2]=4
-uu[i]
-
-
 (* Example: here we parameterized terms have combined algorithms, in terms of gammaB.
    We can then follow up and look in terms of g and b, and try to combine them *)
 (* TODO taken the parameters as an argument, with the ability to template out variable; maybe even specify range *)
 MergeAlgos[algsII_List, form_]:=Module[{data},
 	data=Transpose@Table[Prepend[#,gammaB]&@(
 		Total[u[#]*allMass[[algsI[[#]]]]&/@algsII] / Total[u[#]&/@algsII]
-            )/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->2/3,gammaB->tgammaB,g->1/2} ],algsI]
-     ,{tgammaB,5/10,6/10,2/100}];
-	Print[data];
+	)/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->2/3,gammaB->n/12,g->1/2} ],algsI]
+	,{n,1,11}];
 	Column@Table[ Simplify@Append[
 		form/.Solve@MapThread[#2==form/.{gammaB->#1}&,{data[[1]],yRow}]
 	,"WRONG FORM"][[1]] ,{yRow,data}]
 ]
-MergeAlgos[{1,2},(a+b*x+c*x^2)/(1+d*x+e*x^2)/.{x->gammaB}]
+MergeAlgos[{1,2,3,4},(a+b*x+c*x^2)/(1+d*x+e*x^2)/.{x->gammaB}]
 
 
 (* ::Subsubsection::Closed:: *)
