@@ -38,7 +38,7 @@ SetOptions[Plot3D, AxesLabel->Automatic,
 (*	Also, 0 <= \[Gamma]_C <= 1*)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Setting up the NLP:*)
 
 
@@ -85,10 +85,13 @@ massCombos={{0,1,0,1,b,b} (*28: combine 2,5*)
 	,{0,1,1,x,y,y}/.{x->Min[1-g*mu,b/gammaB],y->Max[0,1-mu]}/.{mu->(1-b+gammaB)/(1+g*gammaB)} (* 34: further flatten 30 and 31 TODO handle case when negative*)
 	,{0,1,0,x,y,y}/.{x->1-(1-b)*g/(g*gammaB+1), y->1-(1-b)/(g*gammaB+1)}(* 35: CHEAT,but cost is attainable using multiple algorithms. combine 4,8,22*)
 	(* cheat, but attainable via convex combo of {0,1,0,1,z,x} and {0,1,0,z,1,x} - b/c we maintain p2c+p2d>=1 *)
-	 ,{0,1,0,x,y,y}/.{x->1-Min[(1-b)/gammaB,b/Max[b,1-gammaB]],y->Min[1,b/(1-gammaB)]}
+	 ,{0,1,0,x,y,y}/.{x->1-Min[(1-b)/gammaB,b/Max[b,1-gammaB]],y->Min[1,b/Max[b,1-gammaB]]}
 	(*,{0,1,0,y,x,x}/.{x->Min[1,b+gammaB],y->Max[0,1-(1-b)/gammaB]}*)(* alt cheat, doesn't maintain p2c+p2d>=1*)
 }//Simplify;
 massLiSven={1-b,b,1-b,b,b,b};
+
+
+Manipulate[Plot[massCombos[[-1]][[{4,5}]]/.{b->mb,gammaB->mgammaB},{mgammaB,0,2},PlotRange->{-.2,1.2}],{{mb,.6},0,1}];
 
 
 CheckMass[mass_]:=FullSimplify[{gA,gA,gammaB,gammaB,gammaC,1-gammaC}.(mass-{a,b,a,b,b,b})/.{a->1-b},
@@ -200,20 +203,21 @@ sol=SolveLPatSol[solNLP,algsI(*, constrD1D2~Union~constrD1D2g*)];
 Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Result*)
 
 
 (* ::Text:: *)
 (*By setting g=.6586, we get approximation factor 1.31019*)
 (**)
-(*This file uses a minimal set of 4? algos+LS to achieve this. *)
-(*One of the three algorithms is infeasible, but I think there should usually exist a convex combination of two(or three?) feasible algorithms which achieve it. (as long as p2b+p2c>=1 - TODO actually for small b this isn't true - we can we adjust chain such that it is always true.)*)
+(*This file gives several possible algo sets to achieve this. *)
 (**)
-(*I think this NLP could be simplified by padding such that |F2C|=min{|F2B|,|Y|}, to eliminate need for gammaC variable.*)
+(*Some of the later algorithms are not directly feasible, but are cost equivalent to convex combination of valid algos. (e.g. as long as p2b+p2c>=1*)
+(**)
+(*This NLP could be simplified by padding such that |F2C|=min{|F2B|,|Y|}, to fix gammaC:=Min[1,gammaB]. Or using something like alg6sym, the need for variable gammaC vanishes entirely.*)
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Dual*)
 
 
@@ -481,7 +485,7 @@ sol=SolveLPatSol[solNLP,algsI];
 Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Explore Tight Point*)
 
 
