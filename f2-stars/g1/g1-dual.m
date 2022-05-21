@@ -76,16 +76,18 @@ massbgamma1={{1,0,0,x,y1,z1},{1,0,x,0,y1,z1},{0,1,0,x,y1,z1},{0,1,x,0,y1,z1},
 	y2->Min[1,(b+gammaB)/gammaC],z2->Min[Max[0,(b+gammaB-gammaC)/(1-gammaC)],1]};
 massOnlyC={{1,0,x,y,1,z},{0,1,x,y,1,z},{1,0,y,x,1,z},{0,1,y,x,1,z}}/.{
 	x->Max[Min[1,(b-gammaC)/gammaB],0], y->Min[Max[0,1-(gammaC-b)/gammaB],1],z->Max[0,(b-gammaB-gammaC)/(1-gammaC)]};
-massCombos={{0,1,0,1,b,b} (*11: combine 2,5*)
+massCombos={{0,1,0,1,b,b} (*28: combine 2,5*)
 	,{1,0,1,0,b,b} (*29 combine 1,3*)
 	,{0,1,1,0,b,b} (*30: flatten 4*)
-    ,{0,1,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*31: flatten 7*)
-    ,{1,0,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*32: flatten 6*)
-	(*{0,1,0,y,x,x}/.{x->Min[1,b+gammaB],y->Max[0,1-(1-b)/gammaB]}*)(*flatten 9, but this is cheating *)
+    ,{0,1,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*31: flatten _*)
+    ,{1,0,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*32: flatten _*)
 	,{1,0,1,x,mu*x,mu*x}/.{x->b/(gammaB+mu)}/.{mu->1/2(1+1/g)} (* 33: further flatten 29 and 32 *)
 	,{0,1,1,x,y,y}/.{x->Min[1-g*mu,b/gammaB],y->Max[0,1-mu]}/.{mu->(1-b+gammaB)/(1+g*gammaB)} (* 34: further flatten 30 and 31 TODO handle case when negative*)
 	,{0,1,0,x,y,y}/.{x->1-(1-b)*g/(g*gammaB+1), y->1-(1-b)/(g*gammaB+1)}(* 35: CHEAT,but cost is attainable using multiple algorithms. combine 4,8,22*)
-};
+	(* cheat, but attainable via convex combo of {0,1,0,1,z,x} and {0,1,0,z,1,x} - b/c we maintain p2c+p2d>=1 *)
+	 ,{0,1,0,x,y,y}/.{x->1-Min[(1-b)/gammaB,b/Max[b,1-gammaB]],y->Min[1,b/(1-gammaB)]}
+	(*,{0,1,0,y,x,x}/.{x->Min[1,b+gammaB],y->Max[0,1-(1-b)/gammaB]}*)(* alt cheat, doesn't maintain p2c+p2d>=1*)
+}//Simplify;
 massLiSven={1-b,b,1-b,b,b,b};
 
 
@@ -164,7 +166,7 @@ EquationQ[eq_]:=Not@FreeQ[eq,(Equal|LessEqual|Less|Greater|GreaterEqual)]||eq (*
 (* We will fix the value of g, and let the adversary set the mass variable gamma *)
 SolveNLP[g1hat_,iter_,algI_,constrExtra_:{}]:=
 	NMaximize[{Z, constrAlg[[algI]], constrBasic, g==g1hat, constrExtra,
-		.6 <= b <= .7, .1 <= gammaB, .1 <= gammaC <= .9 (* manual hints. some problems with gamma12->0, but also maybe valid *)
+		.6 <= b <= .8, .1 <= gammaB, .1 <= gammaC <= .9 (* manual hints. some problems with gamma12->0, but also maybe valid *)
 	}, vars~Union~{g}, MaxIterations->iter][[2]]
 SolveNLP[g1hat_,iter_,algI_:;;]:=SolveNLP[g1hat,iter,algI,{}]
 
@@ -184,11 +186,12 @@ createVar[terms__]:=ToExpression@StringJoin@@ToString/@List[terms]
 
 algsI7={-1,8,22,28,29,30,31,32}; (* re-add some algo. Graphically, (with some heuristic), 5(8 now) seems to be the 'most complete' algo to add.*)
 algsI8={-1,4,8,22,28,29,30,31,32};
+algsI6sym={-1,28,29,30,31,32,36}; (* 36 is cost-equivalent to a convex combination of 2 valid algos *)
 algsI7b={-1,4,8,22,29,30,31,32}; (* our in-between wasn't actually special here *)
 algsI6b={-1,4,8,22,30,31,33};
 algsI5={-1,4,8,22,33,34};
 algsI3={-1,33,34,35};
-algsI=algsI3
+algsI=algsI6sym
 ghat=0.6586
 solNLP=SolveNLP[ghat,300,algsI]
 
@@ -432,11 +435,11 @@ Column@{Z/.sol3,Chop[sol3, .0001],EvaluateAlgsByMass[sol3,algsI]}
 Plot[{u[4],u[5]}/(u[4]+u[5])/.SolveDualLP[{b->(b/.sol),gammaB->pgammaB,gammaC->.0001,g->ghat},algsI6b],{pgammaB,0.01,1},PlotRange->{0,1}]
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Previous Exploration*)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Do we smoothly and fully optimize for full range of parameters?*)
 
 
@@ -489,7 +492,7 @@ Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 Manipulate[Module[{sol2},
 {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
 sol2 = SolveLPatSol[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->g0},algsI(*~Union~{6,1,5,27}*),constrD1D2~Union~constrD1D2g];
-Column@{Z/.sol2,sol2,EvaluateAlgsByCost[sol2,algsI7b]}
+Column@{Z/.sol2,sol2,EvaluateAlgsByMass[sol2,algsI6sym]}
 ],{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.1,1.5,.001},{{pgammaC,gammaC0},.1,1,.001}]
 
 
