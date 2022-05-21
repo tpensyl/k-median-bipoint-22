@@ -38,7 +38,7 @@ SetOptions[Plot3D, AxesLabel->Automatic,
 (*	Also, 0 <= \[Gamma]_C <= 1*)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Setting up the NLP:*)
 
 
@@ -305,15 +305,15 @@ BigFractionStyle@Grid@points;
    We can then follow up and look in terms of g and b, and try to combine them *)
 (* TODO taken the parameters as an argument, with the ability to template out variable; maybe even specify range *)
 MergeAlgos[algsII_List, form_]:=Module[{data},
-	data=Transpose@Table[Prepend[#,gammaB]&@(
+	data=Transpose@Table[Union[{gammaB,u[1],u[2],u[3],u[4]},
 		Total[u[#]*allMass[[algsI[[#]]]]&/@algsII] / Total[u[#]&/@algsII]
-	)/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->2/3,gammaB->n/12,g->1/2} ],algsI]
-	,{n,1,11}];
+	]/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->2/3,gammaB->tgammaB,g->1/2} ],algsI]
+	,{tgammaB,5/10,6/10,2/100}];
 	Column@Table[ Simplify@Append[
 		form/.Solve@MapThread[#2==form/.{gammaB->#1}&,{data[[1]],yRow}]
 	,"WRONG FORM"][[1]] ,{yRow,data}]
 ]
-MergeAlgos[{1,2,3,4},(a+b*x+c*x^2)/(1+d*x+e*x^2)/.{x->gammaB}]
+MergeAlgos[{1,2,3,4},(a1+a2*x+a3*x^2)/(1+b1*x+b2*x^2)/.{x->gammaB}]
 
 
 (* ::Subsubsection::Closed:: *)
