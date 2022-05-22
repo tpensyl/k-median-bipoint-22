@@ -201,7 +201,7 @@ algsI5={-1,4,8,23,34,35};
 algsI3={-1,34,35,36};
 algsI=algsI6sym
 ghat=0.6586
-solNLP=SolveNLP[ghat,400,algsI10]
+solNLP=SolveNLP[ghat,300,algsI10]
 
 
 sol=SolveLPatSol[solNLP,algsI10(*, constrD1D2~Union~constrD1D2g*)];
@@ -313,7 +313,7 @@ points=Table[{n,gammaB," ",#[[4]],p2b," "
 BigFractionStyle@Grid@points;
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Automate rational form-finding*)
 
 
@@ -391,7 +391,7 @@ result
 (*Dual feasibility*)
 
 
-Clear[fsol]
+(* Can we use this closed form as a dual feasible solution? *)
 fsol={alpha->#1,u[1]->#2,u[2]->#3,u[3]->#4,u[4]->#5}&@@#[[1]]/.{\[Gamma]->gammaB}&@
 \!\(\*
 TagBox[GridBox[{
@@ -712,17 +712,39 @@ GridBoxSpacings->{"Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> 
 {b0,g0,gammaB0,gammaC0}=Rationalize[#,1/1000]&/@({b,g,gammaB,gammaC}/.sol)
 
 
+(* check dual feasibility of fsol *)
 algsI=algsI3
 constrExtra={};
 Manipulate[
     {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
 	params={b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg};
-    ToDual[algs[[algsI3]],varD1,varD2]/.fsol/.params
-   ,{{pb,b0},0,1,1/1000},{{pgammaB,gammaB0},1/1000,3/2,1/1000},{{pgammaC,gammaC0},1/100,1,.1/100},{{pg,g0},1/100,1,1/100}
-   ,{eps1,0,1,.01},{i1,1,Length@algsI,1},{i2,2,Length@algsI,1}]
+    {ToDual[algs[[algsI3]],varD1,varD2]/.fsol/.params,
+	(*Total[u[#]*allMass[[algsI3[[#]]]]&/@Range[Length@algsI3]]/Total[u[#]&/@Range[Length@algsI3]]/.fsol/.params//N*)
+	Grid@EvaluateDual[Join[fsol/.params,params]//N,algsI6sym]}
+   ,{{pb,b0},0,1,1/1000},{{pgammaB,gammaB0},1/1000,3/2,1/1000},{{pgammaC,gammaC0},1/100,1,.1/100}
+	,{{pg,g0},1/100,1,1/100}
+   ]
 
 
 {b0,gammaB0,gammaC0}={tb,tgammaB,tgammaC} (* optionally persist modifications *)
+
+
+(* These are the inequalities we must prove, for dual feasibility. *)
+Column[ToDual[algs[[algsI3]],varD1,varD2][[1,2]],Spacings->2]
+
+
+(* Let's apply our solution. Manually multiply both sides of each eq by the denominator to help M out.*)
+hardFeasConstr1=( FullSimplify[#/.fsol, {0<b<1,0<g<1,gammaB>0}]&/@
+			ToDual[algs[[algsI3]],varD1,varD2][[1,2]] )~Select~(Not@TrueQ@#&)
+
+
+(* We see many of the constraints M can directly simplify to True. Of the remaining, most require condition: *)
+feasZoneReq1=(1-g)*gammaB<=b
+FullSimplify[hardFeasConstr1,{0<b<1,0<g<1,gammaB>0,feasZoneReq1}]~Select~(Not@TrueQ@#&)
+(* This leaves one remaining inequality, which doesn't have an obvious simplification. *)
+feasZoneReq2=%[[1]];
+(* We can now visualize the region for which this dual form is feasible *)
+RegionPlot3D[And[feasZoneReq2,feasZoneReq2],{b,0,1},{gammaB,0,2},{g,0,1},AxesLabel->Automatic]
 
 
 (* ::Subsubsection::Closed:: *)
@@ -859,11 +881,11 @@ exactSolutionForm=exactSolutionForm/.\[Gamma]->gammaB;
 (*Or at least, this is the exact form in the critical region.*)
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Previous Exploration*)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Do we smoothly and fully optimize for full range of parameters?*)
 
 
@@ -921,14 +943,14 @@ Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
 (* Initialize manipulate *)
-{b0,g0,gammaB0,gammaC0}={b,g,gammaB,gammaC}/.sol;
+{b0,g0,gammaB0,gammaC0}=Rationalize[{b,g,gammaB,gammaC}/.sol,1/1000];
 
 
 (* we can compare closed form solution... it is loose or invalid in some edge cases *)
 Manipulate[Module[{sol2},
 {tb,tgammaB,tgammaC,tg}={pb,pgammaB,pgammaC,pg}; (* allow saving of modifications *)
 sol2 = SolveLPatSol[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg},algsI6sym(*~Union~{6,1,5,27}*),constrD1D2~Union~constrD1D2g];
-Column@{{#,N@#}&[exactSolutionForm/.sol2],{#,N@#}&[Z/.sol2],sol2,EvaluateAlgsByMass[sol2,algsI6sym]}
+Column@{Grid@{{"Closed form",#,N@#}&[exactSolutionForm/.sol2],{"LP sol",#,N@#}&[Z/.sol2]},sol2,EvaluateAlgsByMass[sol2,algsI6sym]}
 ],{{pb,b0},0,1,1/1000},{{pgammaB,gammaB0},1/1000,3/2,1/1000},{{pgammaC,gammaC0},1/1000,1,1/1000},{{pg,g0},1/1000,1,1/1000}]
 
 
