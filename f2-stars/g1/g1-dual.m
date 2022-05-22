@@ -252,6 +252,10 @@ Grid@EvaluateDual[%,algsI]
 (*Explore Dual*)
 
 
+(* ::Subsubsection::Closed:: *)
+(*Manipulate*)
+
+
 (* Initialize manipulate *)
 {b0,g0,gammaB0,gammaC0}={b,g,gammaB,gammaC}/.sol;
 
@@ -322,7 +326,7 @@ MergeAlgos[algsI_List, algsII_List, form_]:=Module[{data,fits,forms},
 	,{tgammaB,5/10,6/10,2/100},{tb,6/10,7/10,1/10}],1];
 	fits=Table[ Solve@MapThread[#2==form/.{gammaB->#1}&,{data[[1]],yRow}], {yRow,data}];
 	forms=Table[If[fit=={},"WRONG FORM",form/.fit[[1]]], {fit,fits}];
-	Column@Simplify@forms
+	Column@ExpandDenominator@ExpandNumerator@Simplify@forms
 ]
 algsItemp=algsI7b
 form=(a1+a2*x+a3*x^2)/(1+b1*x+b2*x^2)/.{x->gammaB};
@@ -336,21 +340,19 @@ MergeAlgos[algsI_List, algsII_List, form_]:=Module[{data,fits,forms},
 		Join[
 			{gammaB,b,g,alpha,u[1],u[2],u[3],u[4]},
 			Total[u[#]*allMass[[algsI[[#]]]]&/@algsII] / Total[u[#]&/@algsII]
-		]/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->2/3,gammaB->tgammaB,g->tb} ],algsI]
-	,{tgammaB,50/100,53/100,5/1000},{tb,65/100,67/100,5/1000}],1];
+		]/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->tb,gammaB->tgammaB,g->1/2} ],algsI]
+	,{tgammaB,5/10,6/10,2/100},{tb,6/10,7/10,2/100}],1];
 	fits=Table[
 		Solve@MapThread[#4==form/.{gammaB->#1,b->#2,g->#3}&,{data[[1]],data[[2]],data[[3]],yRow}]
 	,{yRow,data}]; (*Print[fits];*)
 	forms=Table[If[fit=={},"WRONG FORM",form/.fit[[1]]], {fit,fits}];
-	Column@FullSimplify@forms
+	Column@ExpandDenominator@ExpandNumerator@Simplify@forms
 ]
-algsItemp=algsI3
-form=(a1+a2*x+a3*x^2+a4*y+a5*x*y+a6*x^2*y)/
-     (1+b2*x+b3*x^2+b4*y+b5*x*y+b6*x^2*y)/.{x->gammaB,y->g};
-Clear[aa,bb]
-form=Sum[aa[i,j]*x^i*y^j,{i,0,2},{j,0,2}]/
-	 Sum[bb[i,j]*x^i*y^j,{i,0,2},{j,0,2}] /. {b[0,0]->1, x->gammaB, y->g}
-MergeAlgos[algsItemp,{1,2},form]
+algsItemp=algsI7b;
+Protect[v];
+form=Sum[v[1,i,j]*x^i*y^j,{i,0,2},{j,0,3}]/
+	 Sum[v[2,i,j]*x^i*y^j,{i,0,2},{j,0,3}] /. {v[2,0,0]->1, x->gammaB, y->b}
+MergeAlgos[algsItemp,{5,8},form]/.gammaB->\[Gamma]
 
 
 (* ::Subsubsection::Closed:: *)
