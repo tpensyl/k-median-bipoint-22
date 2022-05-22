@@ -66,7 +66,7 @@ SetOptions[Plot3D, AxesLabel->Automatic,
 massSafe={{1,0,1,0,x,y},{0,1,1,0,x,y},{1,0,0,1,x,y},{0,1,0,1,x,y},
           {1,0,1,0,z,w},{0,1,1,0,z,w},{1,0,0,1,z,w},{0,1,0,1,z,w}}/.{
 	x->Min[1,b/gammaC],y->Max[0,(b-gammaC)/(1-gammaC)],z->Max[0,1-(1-b)/gammaC],w->Min[1,b/(1-gammaC)]};
-massbgamma0={{1,0,1,x,y1,z1},{1,0,x,1,y1,z1},{0,1,1,x,y1,z1},{0,1,x,1,y1,z1}
+massbgamma0={{1,0,1,x,y1,z1},{1,0,x,1,y1,z1},{0,1,1,x,y1,z1},{0,1,x,1,y1,z1},
 	{1,0,1,x,y2,z2},{1,0,x,1,y2,z2},{0,1,1,x,y2,z2},{0,1,x,1,y2,z2}}/.{
 	x->Min[1,b/gammaB], y1->Max[0,1-(1-b+gammaB)/gammaC],z1->Max[Min[1,(b-gammaB)/(1-gammaC)],0],
 	y2->Max[Min[1,(b-gammaB)/gammaC],0],z2->Max[0,(b-gammaB-gammaC)/(1-gammaC)]};
@@ -76,27 +76,27 @@ massbgamma1={{1,0,0,x,y1,z1},{1,0,x,0,y1,z1},{0,1,0,x,y1,z1},{0,1,x,0,y1,z1},
 	y2->Min[1,(b+gammaB)/gammaC],z2->Min[Max[0,(b+gammaB-gammaC)/(1-gammaC)],1]};
 massOnlyC={{1,0,x,y,1,z},{0,1,x,y,1,z},{1,0,y,x,1,z},{0,1,y,x,1,z}}/.{
 	x->Max[Min[1,(b-gammaC)/gammaB],0], y->Min[Max[0,1-(gammaC-b)/gammaB],1],z->Max[0,(b-gammaB-gammaC)/(1-gammaC)]};
-massCombos={{0,1,0,1,b,b} (*28: combine 2,5*)
-	,{1,0,1,0,b,b} (*29 combine 1,3*)
-	,{0,1,1,0,b,b} (*30: flatten 4*)
-    ,{0,1,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*31: flatten _*)
-    ,{1,0,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*32: flatten _*)
-	,{1,0,1,x,mu*x,mu*x}/.{x->b/(gammaB+mu)}/.{mu->1/2(1+1/g)} (* 33: further flatten 29 and 32 *)
-	,{0,1,1,x,y,y}/.{x->Min[1-g*mu,b/gammaB],y->Max[0,1-mu]}/.{mu->(1-b+gammaB)/(1+g*gammaB)} (* 34: further flatten 30 and 31 TODO handle case when negative*)
-	,{0,1,0,x,y,y}/.{x->1-(1-b)*g/(g*gammaB+1), y->1-(1-b)/(g*gammaB+1)}(* 35: CHEAT,but cost is attainable using multiple algorithms. combine 4,8,22*)
-	(* cheat, but attainable via convex combo of {0,1,0,1,z,x} and {0,1,0,z,1,x} - b/c we maintain p2c+p2d>=1 *)
+massCombos={{0,1,0,1,b,b} (*29: combine 4,8*)
+	,{1,0,1,0,b,b} (*30 combine 1,5*)
+	,{0,1,1,0,b,b} (*31: combine 2,6*)
+    ,{0,1,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*32: flatten _*)
+    ,{1,0,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*33: flatten _*)
+	,{1,0,1,x,mu*x,mu*x}/.{x->b/(gammaB+mu)}/.{mu->1/2(1+1/g)} (* 34: further flatten 30 and 33 *)
+	,{0,1,1,x,y,y}/.{x->Min[1-g*mu,b/gammaB],y->Max[0,1-mu]}/.{mu->(1-b+gammaB)/(1+g*gammaB)} (* 35: further flatten 31 and 32 TODO handle case when negative*)
+	,{0,1,0,x,y,y}/.{x->1-(1-b)*g/(g*gammaB+1), y->1-(1-b)/(g*gammaB+1)}(* 36: CHEAT,but cost is attainable using multiple algorithms. combine 4,8,22*)
+	(* 37: cheat, but attainable via convex combo of {0,1,0,1,z,x} and {0,1,0,z,1,x} - b/c we maintain p2c+p2d>=1 *)
 	 ,{0,1,0,x,y,y}/.{x->1-Min[(1-b)/gammaB,b/Max[b,1-gammaB]],y->Min[1,b/Max[b,1-gammaB]]}
 	(*,{0,1,0,y,x,x}/.{x->Min[1,b+gammaB],y->Max[0,1-(1-b)/gammaB]}*)(* alt cheat, doesn't maintain p2c+p2d>=1*)
 }//Simplify;
 massLiSven={1-b,b,1-b,b,b,b};
 
 
-Manipulate[Plot[massCombos[[-1]][[{4,5}]]/.{b->mb,gammaB->mgammaB},{mgammaB,0,2},PlotRange->{-.2,1.2}],{{mb,.6},0,1}];
+Manipulate[Plot[massCombos[[-1]][[{4,5}]]/.{b->mb,gammaB->mgammaB},{mgammaB,0,2},PlotRange->{-.2,1.2}],{{mb,.6},0,1}]
 
 
 CheckMass[mass_]:=FullSimplify[{gA,gA,gammaB,gammaB,gammaC,1-gammaC}.(mass-{a,b,a,b,b,b})/.{a->1-b},
-	{0<b<1,0<gammaB<1}]
-CheckMass/@massCombos (* check if the mass balances; it should equal zero *)
+	{0<=b<=1,0<gammaB<=1,0<gammaC<1,gammaC<gammaB}]
+CheckMass/@allMass (* check if the mass balances; it should equal zero *)
 
 
 (* ::Subsubsection::Closed:: *)
@@ -183,24 +183,25 @@ ExtractNonLin[sol_]:=Select[sol,MemberQ[varNonLin,#[[1]]]&]
 createVar[terms__]:=ToExpression@StringJoin@@ToString/@List[terms]
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Solving the NLP*)
 
 
-algsI7={-1,8,22,28,29,30,31,32}; (* re-add some algo. Graphically, (with some heuristic), 5(8 now) seems to be the 'most complete' algo to add.*)
-algsI8={-1,4,8,22,28,29,30,31,32};
-algsI6sym={-1,28,29,30,31,32,36}; (* 36 is cost-equivalent to a convex combination of 2 valid algos *)
-algsI7b={-1,4,8,22,29,30,31,32}; (* our in-between wasn't actually special here *)
-algsI6b={-1,4,8,22,30,31,33};
-algsI5={-1,4,8,22,33,34};
-algsI3={-1,33,34,35};
+algsI10={-1,1,4,5,6,8,9,11,16,23,28}; (* minimal set of extreme points *)
+algsI7={-1,8,23,29,30,31,32,33}; (* re-add some algo. Graphically, (with some heuristic), 5(8 now) seems to be the 'most complete' algo to add.*)
+algsI8={-1,4,8,23,29,30,31,32,33};
+algsI6sym={-1,29,30,31,32,33,37}; (* 36 is cost-equivalent to a convex combination of 2 valid algos *)
+algsI7b={-1,4,8,23,30,31,32,33}; (* our in-between wasn't actually special here *)
+algsI6b={-1,4,8,23,31,32,34};
+algsI5={-1,4,8,23,34,35};
+algsI3={-1,34,35,36};
 algsI=algsI6sym
 ghat=0.6586
-solNLP=SolveNLP[ghat,300,algsI]
+solNLP=SolveNLP[ghat,400,algsI10]
 
 
-sol=SolveLPatSol[solNLP,algsI(*, constrD1D2~Union~constrD1D2g*)];
-Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
+sol=SolveLPatSol[solNLP,algsI10(*, constrD1D2~Union~constrD1D2g*)];
+Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI10]}
 
 
 (* ::Subsection::Closed:: *)
