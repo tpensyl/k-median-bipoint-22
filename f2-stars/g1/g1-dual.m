@@ -4,6 +4,10 @@
 (*F2-Stars*)
 
 
+(* ::Subsection::Closed:: *)
+(*Notebook Settings*)
+
+
 SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->8]
 SetOptions[Plot3D, AxesLabel->Automatic,
 	PlotStyle->Opacity[.7], ClippingStyle->None,
@@ -66,7 +70,7 @@ SetOptions[Plot3D, AxesLabel->Automatic,
 massSafe={{1,0,1,0,x,y},{0,1,1,0,x,y},{1,0,0,1,x,y},{0,1,0,1,x,y},
           {1,0,1,0,z,w},{0,1,1,0,z,w},{1,0,0,1,z,w},{0,1,0,1,z,w}}/.{
 	x->Min[1,b/gammaC],y->Max[0,(b-gammaC)/(1-gammaC)],z->Max[0,1-(1-b)/gammaC],w->Min[1,b/(1-gammaC)]};
-massbgamma0={{1,0,1,x,y1,z1},{1,0,x,1,y1,z1},{0,1,1,x,y1,z1},{0,1,x,1,y1,z1}
+massbgamma0={{1,0,1,x,y1,z1},{1,0,x,1,y1,z1},{0,1,1,x,y1,z1},{0,1,x,1,y1,z1},
 	{1,0,1,x,y2,z2},{1,0,x,1,y2,z2},{0,1,1,x,y2,z2},{0,1,x,1,y2,z2}}/.{
 	x->Min[1,b/gammaB], y1->Max[0,1-(1-b+gammaB)/gammaC],z1->Max[Min[1,(b-gammaB)/(1-gammaC)],0],
 	y2->Max[Min[1,(b-gammaB)/gammaC],0],z2->Max[0,(b-gammaB-gammaC)/(1-gammaC)]};
@@ -76,22 +80,27 @@ massbgamma1={{1,0,0,x,y1,z1},{1,0,x,0,y1,z1},{0,1,0,x,y1,z1},{0,1,x,0,y1,z1},
 	y2->Min[1,(b+gammaB)/gammaC],z2->Min[Max[0,(b+gammaB-gammaC)/(1-gammaC)],1]};
 massOnlyC={{1,0,x,y,1,z},{0,1,x,y,1,z},{1,0,y,x,1,z},{0,1,y,x,1,z}}/.{
 	x->Max[Min[1,(b-gammaC)/gammaB],0], y->Min[Max[0,1-(gammaC-b)/gammaB],1],z->Max[0,(b-gammaB-gammaC)/(1-gammaC)]};
-massCombos={{0,1,0,1,b,b} (*11: combine 2,5*)
-	,{1,0,1,0,b,b} (*29 combine 1,3*)
-	,{0,1,1,0,b,b} (*30: flatten 4*)
-    ,{0,1,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*31: flatten 7*)
-    ,{1,0,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*32: flatten 6*)
-	(*{0,1,0,y,x,x}/.{x->Min[1,b+gammaB],y->Max[0,1-(1-b)/gammaB]}*)(*flatten 9, but this is cheating *)
-	,{1,0,1,x,mu*x,mu*x}/.{x->b/(gammaB+mu)}/.{mu->1/2(1+1/g)} (* 33: further flatten 29 and 32 *)
-	,{0,1,1,x,y,y}/.{x->Min[1-g*mu,b/gammaB],y->Max[0,1-mu]}/.{mu->(1-b+gammaB)/(1+g*gammaB)} (* 34: further flatten 30 and 31 TODO handle case when negative*)
-	,{0,1,0,x,y,y}/.{x->1-(1-b)*g/(g*gammaB+1), y->1-(1-b)/(g*gammaB+1)}(* 35: CHEAT,but cost is attainable using multiple algorithms. combine 4,8,22*)
-};
+massCombos={{0,1,0,1,b,b} (*29: combine 4,8*)
+	,{1,0,1,0,b,b} (*30 combine 1,5*)
+	,{0,1,1,0,b,b} (*31: combine 2,6*)
+    ,{0,1,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*32: flatten _*)
+    ,{1,0,1,x,y,y}/.{x->Min[1,b/gammaB],y->Max[0,b-gammaB]}(*33: flatten _*)
+	,{1,0,1,x,mu*x,mu*x}/.{x->b/(gammaB+mu)}/.{mu->1/2(1+1/g)} (* 34: further flatten 30 and 33 *)
+	,{0,1,1,x,y,y}/.{x->Min[1-g*mu,b/gammaB],y->Max[0,1-mu]}/.{mu->(1-b+gammaB)/(1+g*gammaB)} (* 35: further flatten 31 and 32 TODO handle case when negative*)
+	,{0,1,0,x,y,y}/.{x->1-(1-b)*g/(g*gammaB+1), y->1-(1-b)/(g*gammaB+1)}(* 36: CHEAT,but cost is attainable using multiple algorithms. combine 4,8,22*)
+	(* 37: cheat, but attainable via convex combo of {0,1,0,1,z,x} and {0,1,0,z,1,x} - b/c we maintain p2c+p2d>=1 *)
+	 ,{0,1,0,x,y,y}/.{x->1-Min[(1-b)/gammaB,b/Max[b,1-gammaB]],y->Min[1,b/Max[b,1-gammaB]]}
+	(*,{0,1,0,y,x,x}/.{x->Min[1,b+gammaB],y->Max[0,1-(1-b)/gammaB]}*)(* alt cheat, doesn't maintain p2c+p2d>=1*)
+}//Simplify;
 massLiSven={1-b,b,1-b,b,b,b};
 
 
+Manipulate[Plot[massCombos[[-1]][[{4,5}]]/.{b->mb,gammaB->mgammaB},{mgammaB,0,2},PlotRange->{-.2,1.2}],{{mb,.6},0,1}];
+
+
 CheckMass[mass_]:=FullSimplify[{gA,gA,gammaB,gammaB,gammaC,1-gammaC}.(mass-{a,b,a,b,b,b})/.{a->1-b},
-	{0<b<1,0<gammaB<1}]
-CheckMass/@massCombos (* check if the mass balances; it should equal zero *)
+	{0<=b<=1,0<gammaB<=1,0<gammaC<1,gammaC<gammaB}]
+CheckMass/@allMass (* check if the mass balances; it should equal zero *)
 
 
 (* ::Subsubsection::Closed:: *)
@@ -164,13 +173,13 @@ EquationQ[eq_]:=Not@FreeQ[eq,(Equal|LessEqual|Less|Greater|GreaterEqual)]||eq (*
 (* We will fix the value of g, and let the adversary set the mass variable gamma *)
 SolveNLP[g1hat_,iter_,algI_,constrExtra_:{}]:=
 	NMaximize[{Z, constrAlg[[algI]], constrBasic, g==g1hat, constrExtra,
-		.6 <= b <= .7, .1 <= gammaB, .1 <= gammaC <= .9 (* manual hints. some problems with gamma12->0, but also maybe valid *)
+		.6 <= b <= .8, .1 <= gammaB, .1 <= gammaC <= .9 (* manual hints. some problems with gamma12->0, but also maybe valid *)
 	}, vars~Union~{g}, MaxIterations->iter][[2]]
 SolveNLP[g1hat_,iter_,algI_:;;]:=SolveNLP[g1hat,iter,algI,{}]
 
 (* If we fix non-linear variables, remaining system is linear and very fast/accurate *)
 SolveLP[nonLinParams_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=
-	NMaximize[{Z, constrAlg[[algI]], constrBasic, constrExtra}/.nonLinParams,
+	Maximize[{Z, constrAlg[[algI]], constrBasic, constrExtra}/.nonLinParams,
 		Union[varD1,varD2,{Z}]][[2]]~Join~nonLinParams;
 SolveLPatSol[fullSol_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=SolveLP[ExtractNonLin[fullSol], algI,constrExtra]
 ExtractNonLin[sol_]:=Select[sol,MemberQ[varNonLin,#[[1]]]&]
@@ -182,32 +191,35 @@ createVar[terms__]:=ToExpression@StringJoin@@ToString/@List[terms]
 (*Solving the NLP*)
 
 
-algsI7={-1,8,22,28,29,30,31,32}; (* re-add some algo. Graphically, (with some heuristic), 5(8 now) seems to be the 'most complete' algo to add.*)
-algsI8={-1,4,8,22,28,29,30,31,32};
-algsI7b={-1,4,8,22,29,30,31,32}; (* our in-between wasn't actually special here *)
-algsI6b={-1,4,8,22,30,31,33};
-algsI5={-1,4,8,22,33,34};
-algsI3={-1,33,34,35};
-algsI=algsI3
+algsI10={-1,1,4,5,6,8,9,11,16,23,28}; (* minimal set of extreme points *)
+algsI7={-1,8,23,29,30,31,32,33}; (* re-add some algo. Graphically, (with some heuristic), 5(8 now) seems to be the 'most complete' algo to add.*)
+algsI8={-1,4,8,23,29,30,31,32,33};
+algsI6sym={-1,29,30,31,32,33,37}; (* 36 is cost-equivalent to a convex combination of 2 valid algos *)
+algsI7b={-1,4,8,23,30,31,32,33}; (* our in-between wasn't actually special here *)
+algsI6b={-1,4,8,23,31,32,34};
+algsI5={-1,4,8,23,34,35};
+algsI3={-1,34,35,36};
+algsI=algsI6sym
 ghat=0.6586
-solNLP=SolveNLP[ghat,300,algsI]
+solNLP=SolveNLP[ghat,400,algsI10]
 
 
-sol=SolveLPatSol[solNLP,algsI(*, constrD1D2~Union~constrD1D2g*)];
-Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
+sol=SolveLPatSol[solNLP,algsI10(*, constrD1D2~Union~constrD1D2g*)];
+Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI10]}
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Result*)
 
 
 (* ::Text:: *)
 (*By setting g=.6586, we get approximation factor 1.31019*)
 (**)
-(*This file uses a minimal set of 4? algos+LS to achieve this. *)
-(*One of the three algorithms is infeasible, but I think there should usually exist a convex combination of two(or three?) feasible algorithms which achieve it. (as long as p2b+p2c>=1 - TODO actually for small b this isn't true - we can we adjust chain such that it is always true.)*)
+(*This file gives several possible algo sets to achieve this. *)
 (**)
-(*I think this NLP could be simplified by padding such that |F2C|=min{|F2B|,|Y|}, to eliminate need for gammaC variable.*)
+(*Some of the later algorithms are not directly feasible, but are cost equivalent to convex combination of valid algos. (e.g. as long as p2b+p2c>=1*)
+(**)
+(*This NLP could be simplified by padding such that |F2C|=min{|F2B|,|Y|}, to fix gammaC:=Min[1,gammaB]. Or using something like alg6sym, the need for variable gammaC vanishes entirely.*)
 
 
 (* ::Section:: *)
@@ -244,12 +256,16 @@ Grid@EvaluateDual[%,algsI]
 (*Explore Dual*)
 
 
+(* ::Subsubsection::Closed:: *)
+(*Manipulate*)
+
+
 (* Initialize manipulate *)
 {b0,g0,gammaB0,gammaC0}={b,g,gammaB,gammaC}/.sol;
 
 
 BigFractionStyle = Style[#, DefaultOptions -> {FractionBoxOptions -> {AllowScriptLevelChange -> False}}] &;
-algsI=algsI3;
+algsI=algsI3
 constrExtra={};
 Manipulate[
     {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
@@ -304,16 +320,409 @@ BigFractionStyle@Grid@points;
 (* Example: here we parameterized terms have combined algorithms, in terms of gammaB.
    We can then follow up and look in terms of g and b, and try to combine them *)
 (* TODO taken the parameters as an argument, with the ability to template out variable; maybe even specify range *)
-MergeAlgos[algsII_List, form_]:=Module[{data},
-	data=Transpose@Table[Prepend[#,gammaB]&@(
-		Total[u[#]*allMass[[algsI[[#]]]]&/@algsII] / Total[u[#]&/@algsII]
-	)/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->2/3,gammaB->n/12,g->1/2} ],algsI]
-	,{n,1,11}];
-	Column@Table[ Simplify@Append[
-		form/.Solve@MapThread[#2==form/.{gammaB->#1}&,{data[[1]],yRow}]
-	,"WRONG FORM"][[1]] ,{yRow,data}]
+Clear[MergeAlgos]
+MergeAlgos[algsI_List, algsII_List, form_]:=Module[{data,fits,forms},
+	data=Transpose@Flatten[Table[
+		Join[
+			{gammaB,b,g,alpha,u[1],u[2],u[3],u[4]},
+			Total[u[#]*allMass[[algsI[[#]]]]&/@algsII] / Total[u[#]&/@algsII]
+		]/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->2/3,gammaB->2/3,g->tg} ],algsI]
+	,{tgammaB,51/100,52/100,1/100/5},{tg,66/100,67/100,1/100/6}],1];
+	fits=Table[
+		Solve@MapThread[#4==form/.{gammaB->#1,b->#2,g->#3}&,{data[[1]],data[[2]],data[[3]],yRow}]
+	,{yRow,data}]; (*Print[fits];*)
+	forms=Table[If[fit=={},"WRONG FORM",form/.fit[[1]]], {fit,fits}];
+	Column@ExpandDenominator@ExpandNumerator@Simplify@forms
 ]
-MergeAlgos[{1,2,3,4},(a+b*x+c*x^2)/(1+d*x+e*x^2)/.{x->gammaB}]
+algsItemp=algsI3;
+form=(a1+a2*x+a3*x^2+a4*x^3)/(1+b1*x+b2*x^2+b3*x^3)/.{x->b};
+form=Sum[v[1,i]*x^i,{i,0,3}]/
+     Sum[v[2,i]*x^i,{i,0,3}]/. {v[2,0]->1, x->g}
+MergeAlgos[algsItemp,{1,2,3,4},form]
+
+
+(* Detect 2 vars *)
+Clear[MergeAlgos]
+MergeAlgos[algsI_List, algsII_List, form_]:=Module[{data,fits,forms},
+	data=Transpose@Flatten[Table[
+		Join[
+			{gammaB,b,g,alpha,u[1],u[2],u[3],u[4]},
+			Total[u[#]*allMass[[algsI[[#]]]]&/@algsII] / Total[u[#]&/@algsII]
+		]/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->tb,gammaB->tgammaB,g->1/2} ],algsI]
+	,{tgammaB,51/100,52/100,1/100/4},{tb,66/100,67/100,1/100/5}],1];
+	fits=Table[
+		Solve@MapThread[#4==form/.{gammaB->#1,b->#2,g->#3}&,{data[[1]],data[[2]],data[[3]],yRow}]
+	,{yRow,data[[{4}]]}]; (*Print[fits];*)
+	forms=Table[If[fit=={},"WRONG FORM",form/.fit[[1]]], {fit,fits}];
+	Column@ExpandDenominator@ExpandNumerator@Simplify@forms
+]
+algsItemp=algsI3;
+Protect[v];
+form=Sum[v[1,i,j]*x^i*y^j,{i,0,2},{j,0,2}]/
+	 Sum[v[2,i,j]*x^i*y^j,{i,0,2},{j,0,3}]/. {v[2,0,0]->1, x->gammaB, y->b}
+{time,result}=Timing@MergeAlgos[algsItemp,{1,2,3,4},form]/.gammaB->\[Gamma]
+
+
+(* Detect all 3 vars? *)
+Clear[MergeAlgos]
+MergeAlgos[algsI_List, algsII_List, form_]:=Module[{data,fits,forms},
+	data=Transpose@Flatten[Table[
+		Join[
+			{gammaB,b,g,alpha,u[1],u[2],u[3],u[4]},
+			Total[u[#]*allMass[[algsI[[#]]]]&/@algsII] / Total[u[#]&/@algsII]
+		]/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->tb,gammaB->tgammaB,g->tg} ],algsI]
+	,{tgammaB,51/100,52/100,1/100/3},{tb,66/100,67/100,1/100/4},{tg,55/100,56/100,1/100/3}],2];
+	fits=Table[
+		Solve@MapThread[#4==form/.{gammaB->#1,b->#2,g->#3}&,{data[[1]],data[[2]],data[[3]],yRow}](*//(Print[#];#)&*)
+	,{yRow,data}]; (*Print[fits];*)
+	forms=Table[If[fit=={},"WRONG FORM",form/.fit[[1]]], {fit,fits}];
+	Column[ExpandDenominator@ExpandNumerator@Simplify@forms,Spacings->1]
+]
+algsItemp=algsI3;
+Protect[v];
+form=Sum[v[1,i,j,k]*x^i*y^j*z^k,{i,0,2},{j,0,3},{k,0,2}]/
+	 Sum[v[2,i,j,k]*x^i*y^j*z^k,{i,0,2},{j,0,3},{k,0,2}]/. {v[2,0,0,0]->1, x->gammaB, y->b, z->g};
+{time,result}=Timing@MergeAlgos[algsItemp,{1,2,3,4},form]/.gammaB->\[Gamma];
+time
+result
+
+
+(* ::Subsubsection:: *)
+(*Dual feasibility*)
+
+
+Clear[fsol]
+fsol={alpha->#1,u[1]->#2,u[2]->#3,u[3]->#4,u[4]->#5}&@@#[[1]]/.{\[Gamma]->gammaB}&@
+\!\(\*
+TagBox[GridBox[{
+{
+FractionBox[
+RowBox[{
+RowBox[{"-", "2"}], "+", 
+RowBox[{"4", " ", "b"}], "-", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"]}], "-", "g", "+", 
+RowBox[{"b", " ", "g"}], "-", 
+RowBox[{"3", " ", "\[Gamma]"}], "+", 
+RowBox[{"2", " ", "b", " ", "\[Gamma]"}], "-", 
+RowBox[{"5", " ", "g", " ", "\[Gamma]"}], "+", 
+RowBox[{"9", " ", "b", " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"6", " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{"4", " ", "b", " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}]}], 
+RowBox[{
+RowBox[{"-", "2"}], "+", 
+RowBox[{"4", " ", "b"}], "-", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"]}], "-", "g", "+", 
+RowBox[{"3", " ", "b", " ", "g"}], "-", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", "g"}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"], " ", "g"}], "-", 
+RowBox[{"3", " ", "\[Gamma]"}], "+", 
+RowBox[{"4", " ", "b", " ", "\[Gamma]"}], "-", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"], " ", "\[Gamma]"}], "-", 
+RowBox[{"5", " ", "g", " ", "\[Gamma]"}], "+", 
+RowBox[{"11", " ", "b", " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"8", " ", 
+SuperscriptBox["b", "2"], " ", "g", " ", "\[Gamma]"}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"], " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"6", " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{"8", " ", "b", " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "-", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "-", 
+RowBox[{"2", " ", "b", " ", 
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"], " ", 
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}]}]]},
+{
+FractionBox[
+RowBox[{"g", "-", 
+RowBox[{"3", " ", "b", " ", "g"}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"], " ", "g"}], "-", "\[Gamma]", "+", 
+RowBox[{"g", " ", "\[Gamma]"}], "-", 
+RowBox[{"b", " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"2", " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}]}], 
+RowBox[{
+RowBox[{"-", "2"}], "+", 
+RowBox[{"4", " ", "b"}], "-", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"]}], "-", "g", "+", 
+RowBox[{"3", " ", "b", " ", "g"}], "-", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", "g"}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"], " ", "g"}], "-", 
+RowBox[{"3", " ", "\[Gamma]"}], "+", 
+RowBox[{"4", " ", "b", " ", "\[Gamma]"}], "-", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"], " ", "\[Gamma]"}], "-", 
+RowBox[{"5", " ", "g", " ", "\[Gamma]"}], "+", 
+RowBox[{"11", " ", "b", " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"8", " ", 
+SuperscriptBox["b", "2"], " ", "g", " ", "\[Gamma]"}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"], " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"6", " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{"8", " ", "b", " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "-", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "-", 
+RowBox[{"2", " ", "b", " ", 
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"], " ", 
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}]}]]},
+{
+FractionBox[
+RowBox[{
+RowBox[{"-", "2"}], "+", 
+RowBox[{"6", " ", "b"}], "-", 
+RowBox[{"6", " ", 
+SuperscriptBox["b", "2"]}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"]}], "-", 
+RowBox[{"2", " ", "g"}], "+", 
+RowBox[{"6", " ", "b", " ", "g"}], "-", 
+RowBox[{"6", " ", 
+SuperscriptBox["b", "2"], " ", "g"}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"], " ", "g"}], "-", 
+RowBox[{"2", " ", "\[Gamma]"}], "+", 
+RowBox[{"4", " ", "b", " ", "\[Gamma]"}], "-", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"], " ", "\[Gamma]"}], "-", 
+RowBox[{"6", " ", "g", " ", "\[Gamma]"}], "+", 
+RowBox[{"16", " ", "b", " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"14", " ", 
+SuperscriptBox["b", "2"], " ", "g", " ", "\[Gamma]"}], "+", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "3"], " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"4", " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{"8", " ", "b", " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "-", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}]}], 
+RowBox[{
+RowBox[{"-", "2"}], "+", 
+RowBox[{"4", " ", "b"}], "-", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"]}], "-", "g", "+", 
+RowBox[{"3", " ", "b", " ", "g"}], "-", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", "g"}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"], " ", "g"}], "-", 
+RowBox[{"3", " ", "\[Gamma]"}], "+", 
+RowBox[{"4", " ", "b", " ", "\[Gamma]"}], "-", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"], " ", "\[Gamma]"}], "-", 
+RowBox[{"5", " ", "g", " ", "\[Gamma]"}], "+", 
+RowBox[{"11", " ", "b", " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"8", " ", 
+SuperscriptBox["b", "2"], " ", "g", " ", "\[Gamma]"}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"], " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"6", " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{"8", " ", "b", " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "-", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "-", 
+RowBox[{"2", " ", "b", " ", 
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"], " ", 
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}]}]]},
+{
+FractionBox[
+RowBox[{
+RowBox[{
+RowBox[{"-", "2"}], " ", "b"}], "+", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"]}], "-", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"]}], "+", 
+RowBox[{"2", " ", "b", " ", "g"}], "-", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", "g"}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"], " ", "g"}], "-", 
+RowBox[{"2", " ", "b", " ", "g", " ", "\[Gamma]"}], "+", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"], " ", "g", " ", "\[Gamma]"}], "+", 
+RowBox[{"2", " ", "b", " ", 
+SuperscriptBox["g", "2"], " ", "\[Gamma]"}], "-", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", 
+SuperscriptBox["g", "2"], " ", "\[Gamma]"}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"], " ", 
+SuperscriptBox["g", "2"], " ", "\[Gamma]"}]}], 
+RowBox[{
+RowBox[{"-", "2"}], "+", 
+RowBox[{"4", " ", "b"}], "-", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"]}], "-", "g", "+", 
+RowBox[{"3", " ", "b", " ", "g"}], "-", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", "g"}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"], " ", "g"}], "-", 
+RowBox[{"3", " ", "\[Gamma]"}], "+", 
+RowBox[{"4", " ", "b", " ", "\[Gamma]"}], "-", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"], " ", "\[Gamma]"}], "-", 
+RowBox[{"5", " ", "g", " ", "\[Gamma]"}], "+", 
+RowBox[{"11", " ", "b", " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"8", " ", 
+SuperscriptBox["b", "2"], " ", "g", " ", "\[Gamma]"}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"], " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"6", " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{"8", " ", "b", " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "-", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "-", 
+RowBox[{"2", " ", "b", " ", 
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"], " ", 
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}]}]]},
+{
+FractionBox[
+RowBox[{
+RowBox[{
+RowBox[{"-", "2"}], " ", "b", " ", "g"}], "+", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", "g"}], "-", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"], " ", "g"}], "-", 
+RowBox[{"2", " ", "b", " ", "g", " ", "\[Gamma]"}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"], " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"2", " ", "b", " ", 
+SuperscriptBox["g", "2"], " ", "\[Gamma]"}], "+", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", 
+SuperscriptBox["g", "2"], " ", "\[Gamma]"}], "-", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"], " ", 
+SuperscriptBox["g", "2"], " ", "\[Gamma]"}], "-", 
+RowBox[{"2", " ", "b", " ", 
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"], " ", 
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}]}], 
+RowBox[{
+RowBox[{"-", "2"}], "+", 
+RowBox[{"4", " ", "b"}], "-", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"]}], "-", "g", "+", 
+RowBox[{"3", " ", "b", " ", "g"}], "-", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", "g"}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"], " ", "g"}], "-", 
+RowBox[{"3", " ", "\[Gamma]"}], "+", 
+RowBox[{"4", " ", "b", " ", "\[Gamma]"}], "-", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"], " ", "\[Gamma]"}], "-", 
+RowBox[{"5", " ", "g", " ", "\[Gamma]"}], "+", 
+RowBox[{"11", " ", "b", " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"8", " ", 
+SuperscriptBox["b", "2"], " ", "g", " ", "\[Gamma]"}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "3"], " ", "g", " ", "\[Gamma]"}], "-", 
+RowBox[{"6", " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{"8", " ", "b", " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "-", 
+RowBox[{"4", " ", 
+SuperscriptBox["b", "2"], " ", "g", " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "-", 
+RowBox[{"2", " ", "b", " ", 
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}], "+", 
+RowBox[{"2", " ", 
+SuperscriptBox["b", "2"], " ", 
+SuperscriptBox["g", "2"], " ", 
+SuperscriptBox["\[Gamma]", "2"]}]}]]}
+},
+DefaultBaseStyle->"Column",
+GridBoxAlignment->{"Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {}, "RowsIndexed" -> {}, "Items" -> {}, "ItemsIndexed" -> {}},
+GridBoxItemSize->{"Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{Automatic}}, "RowsIndexed" -> {}, "Items" -> {}, "ItemsIndexed" -> {}},
+GridBoxSpacings->{"Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1}}, "RowsIndexed" -> {}, "Items" -> {}, "ItemsIndexed" -> {}}],
+"Column"]\);
+
+
+(* Initialize manipulate *)
+{b0,g0,gammaB0,gammaC0}=Rationalize[#,1/1000]&/@({b,g,gammaB,gammaC}/.sol)
+
+
+algsI=algsI3
+constrExtra={};
+Manipulate[
+    {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
+	params={b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg};
+    ToDual[algs[[algsI3]],varD1,varD2]/.fsol/.params
+   ,{{pb,b0},0,1,1/1000},{{pgammaB,gammaB0},1/1000,3/2,1/1000},{{pgammaC,gammaC0},1/100,1,.1/100},{{pg,g0},1/100,1,1/100}
+   ,{eps1,0,1,.01},{i1,1,Length@algsI,1},{i2,2,Length@algsI,1}]
+
+
+{b0,gammaB0,gammaC0}={tb,tgammaB,tgammaC} (* optionally persist modifications *)
 
 
 (* ::Subsubsection::Closed:: *)
@@ -432,6 +841,24 @@ Column@{Z/.sol3,Chop[sol3, .0001],EvaluateAlgsByMass[sol3,algsI]}
 Plot[{u[4],u[5]}/(u[4]+u[5])/.SolveDualLP[{b->(b/.sol),gammaB->pgammaB,gammaC->.0001,g->ghat},algsI6b],{pgammaB,0.01,1},PlotRange->{0,1}]
 
 
+(* ::Text:: *)
+(**)
+
+
+(* ::Subsection:: *)
+(*Result*)
+
+
+exactSolutionForm=(-2+4 b-2 b^2-g+b g-3 \[Gamma]+2 b \[Gamma]-5 g \[Gamma]+9 b g \[Gamma]-4 b^2 g \[Gamma]-6 g \[Gamma]^2+4 b g \[Gamma]^2+g^2 \[Gamma]^2)/(-2+4 b-2 b^2-g+3 b g-4 b^2 g+2 b^3 g-3 \[Gamma]+4 b \[Gamma]-2 b^2 \[Gamma]-5 g \[Gamma]+11 b g \[Gamma]-8 b^2 g \[Gamma]+2 b^3 g \[Gamma]-6 g \[Gamma]^2+8 b g \[Gamma]^2-4 b^2 g \[Gamma]^2+g^2 \[Gamma]^2-2 b g^2 \[Gamma]^2+2 b^2 g^2 \[Gamma]^2)
+exactSolutionForm=exactSolutionForm/.\[Gamma]->gammaB;
+
+
+(* ::Text:: *)
+(*Exact form found by guessing the form, and fitting exact rational-valued tuples (b,gamma,g) and their solutions. (This approach could perhaps be just as easily be be applied to the LP instead of the dual.)*)
+(**)
+(*Or at least, this is the exact form in the critical region.*)
+
+
 (* ::Section::Closed:: *)
 (*Previous Exploration*)
 
@@ -453,9 +880,20 @@ Table[Plot[Z-.32tb/.SolveLPatSol[{g->tg,b->tb,algsI,gammaB->.02,gammaC->.02},alg
 
 
 sols3=ParallelTable[SolveLPatSol[{g->.6586,b->pb,gammaB->gamma,gammaC->Min[gamma,.9999]},All,constrD1D2~Union~constrD1D2g]
-	,{gamma,0.011,1.5,.1},{pb,0.01,1,.04}]~Flatten~1;
+	,{gamma,0.011,1.2,.1},{pb,0.01,1,.04}]~Flatten~1;
 points3={gammaB, b, Z}/.#&/@sols3;
-plot3=ListPlot3D[points3,ColorFunction->(RGBColor[0,1,0]&),AxesLabel->{"gamma","b","Z"}]
+plot3=ListPlot3D[points3,ColorFunction->(RGBColor[0,1,0]&),AxesLabel->{"gamma","b","Z"}];
+plot3X=Plot3D[exactSolutionForm/.g->.6586,{gammaB,0,1.2},{b,0,1},ColorFunction->(RGBColor[0,0,1]&)];
+Show[plot3,plot3X]
+
+
+
+(* closed form is loose for b,gamma close to 1, and often invalid for b<.5 , even with d1/d2 constraints*)
+sols3=ParallelTable[SolveLPatSol[{g->.6586,b->pb,gammaB->gamma,gammaC->Min[gamma,.9999]},All
+	(*,constrD1D2~Union~constrD1D2g*)],{gamma,0.011,1.2,.05},{pb,0.01,1,.04}]~Flatten~1;
+pointsDel={gammaB, b, exactSolutionForm - Z}/.#&/@sols3;
+Max[#[[2]]&/@Select[pointsDel,#[[3]]<-10^-10&]]
+plot3=ListPlot3D[pointsDel,AxesLabel->{"gamma","b","Z"},PlotRange->{-.001,.001}]
 
 
 
@@ -478,7 +916,7 @@ sol=SolveLPatSol[solNLP,algsI];
 Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Explore Tight Point*)
 
 
@@ -486,12 +924,13 @@ Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 {b0,g0,gammaB0,gammaC0}={b,g,gammaB,gammaC}/.sol;
 
 
+(* we can compare closed form solution... it is loose or invalid in some edge cases *)
 Manipulate[Module[{sol2},
-{tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
-sol2 = SolveLPatSol[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->g0},algsI(*~Union~{6,1,5,27}*),constrD1D2~Union~constrD1D2g];
-Column@{Z/.sol2,sol2,EvaluateAlgsByCost[sol2,algsI7b]}
-],{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.1,1.5,.001},{{pgammaC,gammaC0},.1,1,.001}]
+{tb,tgammaB,tgammaC,tg}={pb,pgammaB,pgammaC,pg}; (* allow saving of modifications *)
+sol2 = SolveLPatSol[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg},algsI6sym(*~Union~{6,1,5,27}*),constrD1D2~Union~constrD1D2g];
+Column@{{#,N@#}&[exactSolutionForm/.sol2],{#,N@#}&[Z/.sol2],sol2,EvaluateAlgsByMass[sol2,algsI6sym]}
+],{{pb,b0},0,1,1/1000},{{pgammaB,gammaB0},1/1000,3/2,1/1000},{{pgammaC,gammaC0},1/1000,1,1/1000},{{pg,g0},1/1000,1,1/1000}]
 
 
 
-{b0,gammaB0,gammaC0}={tb,tgammaB,tgammaC} (* persist modifications *)
+{b0,gammaB0,gammaC0,g0}={tb,tgammaB,tgammaC,tg} (* persist modifications *)
