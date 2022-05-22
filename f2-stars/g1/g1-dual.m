@@ -4,6 +4,10 @@
 (*F2-Stars*)
 
 
+(* ::Subsection::Closed:: *)
+(*Notebook Settings*)
+
+
 SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->8]
 SetOptions[Plot3D, AxesLabel->Automatic,
 	PlotStyle->Opacity[.7], ClippingStyle->None,
