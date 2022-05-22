@@ -179,7 +179,7 @@ SolveNLP[g1hat_,iter_,algI_:;;]:=SolveNLP[g1hat,iter,algI,{}]
 
 (* If we fix non-linear variables, remaining system is linear and very fast/accurate *)
 SolveLP[nonLinParams_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=
-	NMaximize[{Z, constrAlg[[algI]], constrBasic, constrExtra}/.nonLinParams,
+	Maximize[{Z, constrAlg[[algI]], constrBasic, constrExtra}/.nonLinParams,
 		Union[varD1,varD2,{Z}]][[2]]~Join~nonLinParams;
 SolveLPatSol[fullSol_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=SolveLP[ExtractNonLin[fullSol], algI,constrExtra]
 ExtractNonLin[sol_]:=Select[sol,MemberQ[varNonLin,#[[1]]]&]
@@ -187,7 +187,7 @@ ExtractNonLin[sol_]:=Select[sol,MemberQ[varNonLin,#[[1]]]&]
 createVar[terms__]:=ToExpression@StringJoin@@ToString/@List[terms]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Solving the NLP*)
 
 
@@ -525,7 +525,7 @@ exactSolutionForm=exactSolutionForm/.\[Gamma]->gammaB;
 (*Previous Exploration*)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Do we smoothly and fully optimize for full range of parameters?*)
 
 
@@ -542,9 +542,20 @@ Table[Plot[Z-.32tb/.SolveLPatSol[{g->tg,b->tb,algsI,gammaB->.02,gammaC->.02},alg
 
 
 sols3=ParallelTable[SolveLPatSol[{g->.6586,b->pb,gammaB->gamma,gammaC->Min[gamma,.9999]},All,constrD1D2~Union~constrD1D2g]
-	,{gamma,0.011,1.5,.1},{pb,0.01,1,.04}]~Flatten~1;
+	,{gamma,0.011,1.2,.1},{pb,0.01,1,.04}]~Flatten~1;
 points3={gammaB, b, Z}/.#&/@sols3;
-plot3=ListPlot3D[points3,ColorFunction->(RGBColor[0,1,0]&),AxesLabel->{"gamma","b","Z"}]
+plot3=ListPlot3D[points3,ColorFunction->(RGBColor[0,1,0]&),AxesLabel->{"gamma","b","Z"}];
+plot3X=Plot3D[exactSolutionForm/.g->.6586,{gammaB,0,1.2},{b,0,1},ColorFunction->(RGBColor[0,0,1]&)];
+Show[plot3,plot3X]
+
+
+
+(* closed form is loose for b,gamma close to 1, and often invalid for b<.5 , even with d1/d2 constraints*)
+sols3=ParallelTable[SolveLPatSol[{g->.6586,b->pb,gammaB->gamma,gammaC->Min[gamma,.9999]},All
+	,constrD1D2~Union~constrD1D2g],{gamma,0.011,1.2,.05},{pb,0.01,1,.04}]~Flatten~1;
+pointsDel={gammaB, b, exactSolutionForm - Z}/.#&/@sols3;
+Max[#[[2]]&/@Select[pointsDel,#[[3]]<-10^-10&]]
+plot3=ListPlot3D[pointsDel,AxesLabel->{"gamma","b","Z"},PlotRange->{-.001,.001}]
 
 
 
@@ -567,7 +578,7 @@ sol=SolveLPatSol[solNLP,algsI];
 Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Explore Tight Point*)
 
 
@@ -575,12 +586,13 @@ Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 {b0,g0,gammaB0,gammaC0}={b,g,gammaB,gammaC}/.sol;
 
 
+(* we can compare closed form solution... it is loose or invalid in some edge cases *)
 Manipulate[Module[{sol2},
-{tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
-sol2 = SolveLPatSol[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->g0},algsI(*~Union~{6,1,5,27}*),constrD1D2~Union~constrD1D2g];
-Column@{Z/.sol2,sol2,EvaluateAlgsByMass[sol2,algsI6sym]}
-],{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.1,1.5,.001},{{pgammaC,gammaC0},.1,1,.001}]
+{tb,tgammaB,tgammaC,tg}={pb,pgammaB,pgammaC,pg}; (* allow saving of modifications *)
+sol2 = SolveLPatSol[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg},algsI6sym(*~Union~{6,1,5,27}*),constrD1D2~Union~constrD1D2g];
+Column@{{#,N@#}&[exactSolutionForm/.sol2],{#,N@#}&[Z/.sol2],sol2,EvaluateAlgsByMass[sol2,algsI6sym]}
+],{{pb,b0},0,1,1/1000},{{pgammaB,gammaB0},1/1000,3/2,1/1000},{{pgammaC,gammaC0},1/1000,1,1/1000},{{pg,g0},1/1000,1,1/1000}]
 
 
 
-{b0,gammaB0,gammaC0}={tb,tgammaB,tgammaC} (* persist modifications *)
+{b0,gammaB0,gammaC0,g0}={tb,tgammaB,tgammaC,tg} (* persist modifications *)
