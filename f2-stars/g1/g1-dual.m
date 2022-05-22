@@ -324,20 +324,24 @@ Clear[MergeAlgos]
 MergeAlgos[algsI_List, algsII_List, form_]:=Module[{data,fits,forms},
 	data=Transpose@Flatten[Table[
 		Join[
-			{gammaB,alpha,u[1],u[2],u[3],u[4]},
+			{gammaB,b,g,alpha,u[1],u[2],u[3],u[4]},
 			Total[u[#]*allMass[[algsI[[#]]]]&/@algsII] / Total[u[#]&/@algsII]
-		]/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->2/3,gammaB->tgammaB,g->1/2} ],algsI]
-	,{tgammaB,5/10,6/10,2/100},{tb,6/10,7/10,1/10}],1];
-	fits=Table[ Solve@MapThread[#2==form/.{gammaB->#1}&,{data[[1]],yRow}], {yRow,data}];
+		]/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->2/3,gammaB->2/3,g->tg} ],algsI]
+	,{tgammaB,51/100,52/100,1/100/5},{tg,66/100,67/100,1/100/6}],1];
+	fits=Table[
+		Solve@MapThread[#4==form/.{gammaB->#1,b->#2,g->#3}&,{data[[1]],data[[2]],data[[3]],yRow}]
+	,{yRow,data}]; (*Print[fits];*)
 	forms=Table[If[fit=={},"WRONG FORM",form/.fit[[1]]], {fit,fits}];
 	Column@ExpandDenominator@ExpandNumerator@Simplify@forms
 ]
-algsItemp=algsI7b
-form=(a1+a2*x+a3*x^2)/(1+b1*x+b2*x^2)/.{x->gammaB};
-MergeAlgos[algsItemp,{5,8},form]
+algsItemp=algsI3;
+form=(a1+a2*x+a3*x^2+a4*x^3)/(1+b1*x+b2*x^2+b3*x^3)/.{x->b};
+form=Sum[v[1,i]*x^i,{i,0,3}]/
+     Sum[v[2,i]*x^i,{i,0,3}]/. {v[2,0]->1, x->g}
+MergeAlgos[algsItemp,{1,2,3,4},form]
 
 
-(* Can we detect multivariate form? *)
+(* Detect 2 vars *)
 Clear[MergeAlgos]
 MergeAlgos[algsI_List, algsII_List, form_]:=Module[{data,fits,forms},
 	data=Transpose@Flatten[Table[
@@ -345,18 +349,42 @@ MergeAlgos[algsI_List, algsII_List, form_]:=Module[{data,fits,forms},
 			{gammaB,b,g,alpha,u[1],u[2],u[3],u[4]},
 			Total[u[#]*allMass[[algsI[[#]]]]&/@algsII] / Total[u[#]&/@algsII]
 		]/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->tb,gammaB->tgammaB,g->1/2} ],algsI]
-	,{tgammaB,5/10,6/10,2/100},{tb,6/10,7/10,2/100}],1];
+	,{tgammaB,51/100,52/100,1/100/4},{tb,66/100,67/100,1/100/5}],1];
 	fits=Table[
 		Solve@MapThread[#4==form/.{gammaB->#1,b->#2,g->#3}&,{data[[1]],data[[2]],data[[3]],yRow}]
-	,{yRow,data}]; (*Print[fits];*)
+	,{yRow,data[[{4}]]}]; (*Print[fits];*)
 	forms=Table[If[fit=={},"WRONG FORM",form/.fit[[1]]], {fit,fits}];
 	Column@ExpandDenominator@ExpandNumerator@Simplify@forms
 ]
-algsItemp=algsI7b;
+algsItemp=algsI3;
 Protect[v];
-form=Sum[v[1,i,j]*x^i*y^j,{i,0,2},{j,0,3}]/
-	 Sum[v[2,i,j]*x^i*y^j,{i,0,2},{j,0,3}] /. {v[2,0,0]->1, x->gammaB, y->b}
-MergeAlgos[algsItemp,{5,8},form]/.gammaB->\[Gamma]
+form=Sum[v[1,i,j]*x^i*y^j,{i,0,2},{j,0,2}]/
+	 Sum[v[2,i,j]*x^i*y^j,{i,0,2},{j,0,3}]/. {v[2,0,0]->1, x->gammaB, y->b}
+{time,result}=Timing@MergeAlgos[algsItemp,{1,2,3,4},form]/.gammaB->\[Gamma]
+
+
+(* Detect all 3 vars? *)
+Clear[MergeAlgos]
+MergeAlgos[algsI_List, algsII_List, form_]:=Module[{data,fits,forms},
+	data=Transpose@Flatten[Table[
+		Join[
+			{gammaB,b,g,alpha,u[1],u[2],u[3],u[4]},
+			Total[u[#]*allMass[[algsI[[#]]]]&/@algsII] / Total[u[#]&/@algsII]
+		]/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->tb,gammaB->tgammaB,g->tg} ],algsI]
+	,{tgammaB,51/100,52/100,1/100/3},{tb,66/100,67/100,1/100/4},{tg,55/100,56/100,1/100/3}],2];
+	fits=Table[
+		Solve@MapThread[#4==form/.{gammaB->#1,b->#2,g->#3}&,{data[[1]],data[[2]],data[[3]],yRow}](*//(Print[#];#)&*)
+	,{yRow,data[[{4}]]}]; (*Print[fits];*)
+	forms=Table[If[fit=={},"WRONG FORM",form/.fit[[1]]], {fit,fits}];
+	Column@ExpandDenominator@ExpandNumerator@Simplify@forms
+]
+algsItemp=algsI3;
+Protect[v];
+form=Sum[v[1,i,j,k]*x^i*y^j*z^k,{i,0,2},{j,0,2},{k,0,2}]/
+	 Sum[v[2,i,j,k]*x^i*y^j*z^k,{i,0,2},{j,0,3},{k,0,2}]/. {v[2,0,0,0]->1, x->gammaB, y->b, z->g};
+{time,result}=Timing@MergeAlgos[algsItemp,{1,2,3,4},form]/.gammaB->\[Gamma];
+time
+result
 
 
 (* ::Subsubsection::Closed:: *)
@@ -473,6 +501,24 @@ Column@{Z/.sol3,Chop[sol3, .0001],EvaluateAlgsByMass[sol3,algsI]}
 
 
 Plot[{u[4],u[5]}/(u[4]+u[5])/.SolveDualLP[{b->(b/.sol),gammaB->pgammaB,gammaC->.0001,g->ghat},algsI6b],{pgammaB,0.01,1},PlotRange->{0,1}]
+
+
+(* ::Text:: *)
+(**)
+
+
+(* ::Subsection:: *)
+(*Result*)
+
+
+exactSolutionForm=(-2+4 b-2 b^2-g+b g-3 \[Gamma]+2 b \[Gamma]-5 g \[Gamma]+9 b g \[Gamma]-4 b^2 g \[Gamma]-6 g \[Gamma]^2+4 b g \[Gamma]^2+g^2 \[Gamma]^2)/(-2+4 b-2 b^2-g+3 b g-4 b^2 g+2 b^3 g-3 \[Gamma]+4 b \[Gamma]-2 b^2 \[Gamma]-5 g \[Gamma]+11 b g \[Gamma]-8 b^2 g \[Gamma]+2 b^3 g \[Gamma]-6 g \[Gamma]^2+8 b g \[Gamma]^2-4 b^2 g \[Gamma]^2+g^2 \[Gamma]^2-2 b g^2 \[Gamma]^2+2 b^2 g^2 \[Gamma]^2)
+exactSolutionForm=exactSolutionForm/.\[Gamma]->gammaB;
+
+
+(* ::Text:: *)
+(*Exact form found by guessing the form, and fitting exact rational-valued tuples (b,gamma,g) and their solutions. (This approach could perhaps be just as easily be be applied to the LP instead of the dual.)*)
+(**)
+(*Or at least, this is the exact form in the critical region.*)
 
 
 (* ::Section::Closed:: *)
