@@ -91,7 +91,7 @@ massCombos={{0,1,0,1,b,b} (*29: combine 4,8*)
 massLiSven={1-b,b,1-b,b,b,b};
 
 
-Manipulate[Plot[massCombos[[-1]][[{4,5}]]/.{b->mb,gammaB->mgammaB},{mgammaB,0,2},PlotRange->{-.2,1.2}],{{mb,.6},0,1}]
+Manipulate[Plot[massCombos[[-1]][[{4,5}]]/.{b->mb,gammaB->mgammaB},{mgammaB,0,2},PlotRange->{-.2,1.2}],{{mb,.6},0,1}];
 
 
 CheckMass[mass_]:=FullSimplify[{gA,gA,gammaB,gammaB,gammaC,1-gammaC}.(mass-{a,b,a,b,b,b})/.{a->1-b},
@@ -218,7 +218,7 @@ Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI10]}
 (*This NLP could be simplified by padding such that |F2C|=min{|F2B|,|Y|}, to fix gammaC:=Min[1,gammaB]. Or using something like alg6sym, the need for variable gammaC vanishes entirely.*)
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Dual*)
 
 
@@ -257,7 +257,7 @@ Grid@EvaluateDual[%,algsI]
 
 
 BigFractionStyle = Style[#, DefaultOptions -> {FractionBoxOptions -> {AllowScriptLevelChange -> False}}] &;
-algsI=algsI3;
+algsI=algsI3
 constrExtra={};
 Manipulate[
     {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
@@ -312,16 +312,45 @@ BigFractionStyle@Grid@points;
 (* Example: here we parameterized terms have combined algorithms, in terms of gammaB.
    We can then follow up and look in terms of g and b, and try to combine them *)
 (* TODO taken the parameters as an argument, with the ability to template out variable; maybe even specify range *)
-MergeAlgos[algsII_List, form_]:=Module[{data},
-	data=Transpose@Table[Union[{gammaB,u[1],u[2],u[3],u[4]},
-		Total[u[#]*allMass[[algsI[[#]]]]&/@algsII] / Total[u[#]&/@algsII]
-	]/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->2/3,gammaB->tgammaB,g->1/2} ],algsI]
-	,{tgammaB,5/10,6/10,2/100}];
-	Column@Table[ Simplify@Append[
-		form/.Solve@MapThread[#2==form/.{gammaB->#1}&,{data[[1]],yRow}]
-	,"WRONG FORM"][[1]] ,{yRow,data}]
+Clear[MergeAlgos]
+MergeAlgos[algsI_List, algsII_List, form_]:=Module[{data,fits,forms},
+	data=Transpose@Flatten[Table[
+		Join[
+			{gammaB,alpha,u[1],u[2],u[3],u[4]},
+			Total[u[#]*allMass[[algsI[[#]]]]&/@algsII] / Total[u[#]&/@algsII]
+		]/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->2/3,gammaB->tgammaB,g->1/2} ],algsI]
+	,{tgammaB,5/10,6/10,2/100},{tb,6/10,7/10,1/10}],1];
+	fits=Table[ Solve@MapThread[#2==form/.{gammaB->#1}&,{data[[1]],yRow}], {yRow,data}];
+	forms=Table[If[fit=={},"WRONG FORM",form/.fit[[1]]], {fit,fits}];
+	Column@Simplify@forms
 ]
-MergeAlgos[{1,2,3,4},(a1+a2*x+a3*x^2)/(1+b1*x+b2*x^2)/.{x->gammaB}]
+algsItemp=algsI7b
+form=(a1+a2*x+a3*x^2)/(1+b1*x+b2*x^2)/.{x->gammaB};
+MergeAlgos[algsItemp,{5,8},form]
+
+
+(* Can we detect multivariate form? *)
+Clear[MergeAlgos]
+MergeAlgos[algsI_List, algsII_List, form_]:=Module[{data,fits,forms},
+	data=Transpose@Flatten[Table[
+		Join[
+			{gammaB,b,g,alpha,u[1],u[2],u[3],u[4]},
+			Total[u[#]*allMass[[algsI[[#]]]]&/@algsII] / Total[u[#]&/@algsII]
+		]/.SolveDualLP[Append[#,gammaC->gammaB/.#]&[ {b->2/3,gammaB->tgammaB,g->tb} ],algsI]
+	,{tgammaB,50/100,53/100,5/1000},{tb,65/100,67/100,5/1000}],1];
+	fits=Table[
+		Solve@MapThread[#4==form/.{gammaB->#1,b->#2,g->#3}&,{data[[1]],data[[2]],data[[3]],yRow}]
+	,{yRow,data}]; (*Print[fits];*)
+	forms=Table[If[fit=={},"WRONG FORM",form/.fit[[1]]], {fit,fits}];
+	Column@FullSimplify@forms
+]
+algsItemp=algsI3
+form=(a1+a2*x+a3*x^2+a4*y+a5*x*y+a6*x^2*y)/
+     (1+b2*x+b3*x^2+b4*y+b5*x*y+b6*x^2*y)/.{x->gammaB,y->g};
+Clear[aa,bb]
+form=Sum[aa[i,j]*x^i*y^j,{i,0,2},{j,0,2}]/
+	 Sum[bb[i,j]*x^i*y^j,{i,0,2},{j,0,2}] /. {b[0,0]->1, x->gammaB, y->g}
+MergeAlgos[algsItemp,{1,2},form]
 
 
 (* ::Subsubsection::Closed:: *)
@@ -440,7 +469,7 @@ Column@{Z/.sol3,Chop[sol3, .0001],EvaluateAlgsByMass[sol3,algsI]}
 Plot[{u[4],u[5]}/(u[4]+u[5])/.SolveDualLP[{b->(b/.sol),gammaB->pgammaB,gammaC->.0001,g->ghat},algsI6b],{pgammaB,0.01,1},PlotRange->{0,1}]
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Previous Exploration*)
 
 
@@ -486,7 +515,7 @@ sol=SolveLPatSol[solNLP,algsI];
 Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Explore Tight Point*)
 
 
