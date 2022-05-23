@@ -173,7 +173,7 @@ EquationQ[eq_]:=Not@FreeQ[eq,(Equal|LessEqual|Less|Greater|GreaterEqual)]||eq (*
 (* We will fix the value of g, and let the adversary set the mass variable gamma *)
 SolveNLP[g1hat_,iter_,algI_,constrExtra_:{}]:=
 	NMaximize[{Z, constrAlg[[algI]], constrBasic, g==g1hat, constrExtra,
-		.6 <= b <= .8, .1 <= gammaB, .1 <= gammaC <= .9 (* manual hints. some problems with gamma12->0, but also maybe valid *)
+		.1 <= b <= .9, .1 <= gammaB, .1 <= gammaC <= .9 (* manual hints. some problems with gamma12->0, but also maybe valid *)
 	}, vars~Union~{g}, MaxIterations->iter][[2]]
 SolveNLP[g1hat_,iter_,algI_:;;]:=SolveNLP[g1hat,iter,algI,{}]
 
@@ -201,11 +201,11 @@ algsI5={-1,4,8,23,34,35};
 algsI3={-1,34,35,36};
 algsI=algsI6sym
 ghat=0.6586
-solNLP=SolveNLP[ghat,300,algsI10]
+solNLP=SolveNLP[ghat,300,algsI]
 
 
 sol=SolveLPatSol[solNLP,algsI10(*, constrD1D2~Union~constrD1D2g*)];
-Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI10]}
+Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
 (* ::Subsection::Closed:: *)
@@ -741,10 +741,10 @@ hardFeasConstr1=( FullSimplify[#/.fsol, {0<b<1,0<g<1,gammaB>0}]&/@
 (* We see many of the constraints M can directly simplify to True. Of the remaining, most require condition: *)
 feasZoneReq1=(1-g)*gammaB<=b
 FullSimplify[hardFeasConstr1,{0<b<1,0<g<1,gammaB>0,feasZoneReq1}]~Select~(Not@TrueQ@#&)
-(* This leaves one remaining inequality, which doesn't have an obvious simplification. *)
+(* This leaves one remaining inequality, which is a non negativity constraint for u[1] = Li-Sven. *)
 feasZoneReq2=%[[1]];
 (* We can now visualize the region for which this dual form is feasible *)
-RegionPlot3D[And[feasZoneReq2,feasZoneReq2],{b,0,1},{gammaB,0,2},{g,0,1},AxesLabel->Automatic]
+RegionPlot3D[And[feasZoneReq1,feasZoneReq2],{b,0,1},{gammaB,0,2},{g,0,1},AxesLabel->Automatic]
 
 
 (* ::Subsubsection::Closed:: *)
@@ -879,6 +879,44 @@ exactSolutionForm=exactSolutionForm/.\[Gamma]->gammaB;
 (*Exact form found by guessing the form, and fitting exact rational-valued tuples (b,gamma,g) and their solutions. (This approach could perhaps be just as easily be be applied to the LP instead of the dual.)*)
 (**)
 (*Or at least, this is the exact form in the critical region.*)
+
+
+(* ::Section:: *)
+(*Exact form*)
+
+
+(* Can we use exact form to randomize or discretize? Assume for now we can handle the infeasible regions elsewhere *)
+(* Requires 'exactSolutionForm' from Dual Result section *)
+(* This doesn't seem to improve things *)
+optX=exactSolutionForm
+Manipulate[
+	tsol3=NMaximize[{Z,(Z<=optX/.{g->#[[1]],gammaB->#[[2]]}&)/@{{ghat1,gam1},{ghat2,gam2}},
+		0<b<1,ghat1<=ghat2<=1,gam1>=gam2>0}
+		,{Z,b,gam1,gam2}][[2]]~Join~{g1->ghat1,g2->ghat2}
+,{{ghat1,.642},0.001,1},{{ghat2,.833},0.001,1}]
+
+
+{feasZoneReq1,feasZoneReq2}/.{gammaB->gam1,g->g1}/.tsol
+{feasZoneReq1,feasZoneReq2}/.{gammaB->gam2,g->g2}/.tsol
+
+
+(* As would be expected, adding a 3rd point also doesn't help. This approach is just too weak. Perhaps
+   because it doesn't take advantage of relationship between d-variables in the different sets? Or do we 
+   actually need algorithms which don't meet this form (e.g. that specialize in FB2 or FB3, etc.) *)
+Manipulate[
+	tsol3=NMaximize[{Z,(Z<=optX/.{g->#[[1]],gammaB->#[[2]]}&)/@{{ghat1,gam1},{ghat2,gam2},{ghat3,gam3}},
+		0<b<1,ghat1<=ghat2<=ghat3<=1,gam1>=gam2>=gam3>0}
+		,{Z,b,gam1,gam2,gam3}][[2]]~Join~{g1->ghat1,g2->ghat2,g3->ghat3}
+,{{ghat1,.642},0.001,1},{{ghat2,.6586},0.001,1},{{ghat3,.833},0.001,1}]
+
+
+(* ::Subsubsection::Closed:: *)
+(*Infeasibility Zone*)
+
+
+(* infeasibility zone worst cost is 1.274 , so seems safely away from the critical area.*)
+sol1=SolveNLP[ghat,300,algsI,{(1-g) gammaB>=b}]
+sol2=SolveNLP[ghat,300,algsI,{gammaB<=g (1+2 b^2+gammaB+(-2+g) gammaB^2-b (3+gammaB))}]
 
 
 (* ::Section:: *)
