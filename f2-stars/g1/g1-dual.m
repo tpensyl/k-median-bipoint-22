@@ -89,7 +89,7 @@ massCombos={{0,1,0,1,b,b} (*29: combine 4,8*)
 	,{0,1,1,x,y,y}/.{x->Min[1-g*mu,b/gammaB],y->Max[0,1-mu]}/.{mu->(1-b+gammaB)/(1+g*gammaB)} (* 35: further flatten 31 and 32 TODO handle case when negative*)
 	,{0,1,0,x,y,y}/.{x->1-(1-b)*g/(g*gammaB+1), y->1-(1-b)/(g*gammaB+1)}(* 36: CHEAT,but cost is attainable using multiple algorithms. combine 4,8,22*)
 	(* 37: cheat, but attainable via convex combo of {0,1,0,1,z,x} and {0,1,0,z,1,x} - b/c we maintain p2c+p2d>=1 *)
-	 ,{0,1,0,x,y,y}/.{x->1-Min[(1-b)/gammaB,b/Max[b,1-gammaB]],y->Min[1,b/Max[b,1-gammaB]]}
+	 ,{0,1,0,x,y,y}/.{x->1-Min[(1-b)/gammaB,b/Max[b,1-gammaB]],y->b/Max[b,1-gammaB]}
 	(*,{0,1,0,y,x,x}/.{x->Min[1,b+gammaB],y->Max[0,1-(1-b)/gammaB]}*)(* alt cheat, doesn't maintain p2c+p2d>=1*)
 }//Simplify;
 massLiSven={1-b,b,1-b,b,b,b};
@@ -194,11 +194,11 @@ createVar[terms__]:=ToExpression@StringJoin@@ToString/@List[terms]
 algsI10={-1,1,4,5,6,8,9,11,16,23,28}; (* minimal set of extreme points *)
 algsI7={-1,8,23,29,30,31,32,33}; (* re-add some algo. Graphically, (with some heuristic), 5(8 now) seems to be the 'most complete' algo to add.*)
 algsI8={-1,4,8,23,29,30,31,32,33};
-algsI6sym={-1,29,30,31,32,33,37}; (* 36 is cost-equivalent to a convex combination of 2 valid algos *)
 algsI7b={-1,4,8,23,30,31,32,33}; (* our in-between wasn't actually special here *)
 algsI6b={-1,4,8,23,31,32,34};
 algsI5={-1,4,8,23,34,35};
 algsI3={-1,34,35,36};
+algsI6sym={-1,29,30,31,32,33,37}; (* 36 is cost-equivalent to a convex combination of 2 valid algos *)
 algsI=algsI6sym
 ghat=0.6586
 solNLP=SolveNLP[ghat,300,algsI]
