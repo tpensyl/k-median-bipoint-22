@@ -4,7 +4,14 @@
 (*F2-Stars*)
 
 
-SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->9]
+(* ::Subsection::Closed:: *)
+(*Notebook Settings*)
+
+
+SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->8]
+SetOptions[Plot3D, AxesLabel->Automatic,
+	PlotStyle->Opacity[.7], ClippingStyle->None,
+	BoundaryStyle -> Directive[Black, Thick]];
 
 
 (* ::Subsection::Closed:: *)
@@ -44,7 +51,7 @@ SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->9]
 (*Setting up the NLP:*)
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Client Costs*)
 
 
@@ -53,6 +60,9 @@ SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->9]
 (*	p[i2]*d2 + p[i2']*d1 + p[i2'i1']*d(i1,i3)*)
 (*where i3 is either \[Sigma]_X(i1) or \[Sigma]_Y(i1). The bound used for d(i1,i3) varies by client type, but is always some constant times (d1+d2).*)
 
+
+varD1 = {d111,d112,d113,d121,d122,d123,d131,d132,d133,d1131,d1132,d1133,d1231,d1232,d1233,d1331,d1332,d1333};
+varD2 = {d211,d212,d213,d221,d222,d223,d231,d232,d233,d311,d312,d313,d321,d322,d323,d331,d332,d333};
 
 Cf1[d1_,d2_,p1_,p2_,g_]:=p2*d2+(1-p2)*d1+(1-p2)*(1-p1)*g*(d1+d2)
 (* If \[Sigma]_X(i1)!=i2, then we may try connecting to both before falling back on \[Sigma]_Y(i1) *)
@@ -81,6 +91,8 @@ cost[p11_,p12_,p13_,p21_,p22_,p23_,p31_,p32_,p33_] := Total@{
 	Cf1[d1333,d333,p13,p33,1]    (* J3_ 33: F13 and F33 *)
 }
 
+costLiSven = b*(3-2b)Total[varD2]+(1-b)*Total[varD1];
+
 
 (* ::Subsubsection::Closed:: *)
 (*Probability Mass*)
@@ -90,7 +102,7 @@ cost[p11_,p12_,p13_,p21_,p22_,p23_,p31_,p32_,p33_] := Total@{
 (*Let A(p11,p12,p13,p21,p22,p23,p31,p32,p33) give proportions.*)
 
 
-mass = {{0,Min[1,Max[0,(b - gamma13 - gamma32)/gamma12]],1,1,1,Min[1,Max[0,(b - gamma32)/gamma13]],Max[0,(-b + gamma12 + gamma13 + gamma32 + gamma33)/(gamma32 + gamma33 - 1)],Min[1,b/gamma32],Min[1,Max[0,(b - gamma12 - gamma13 - gamma32)/gamma33]]},
+rawMass = {{0,Min[1,Max[0,(b - gamma13 - gamma32)/gamma12]],1,1,1,Min[1,Max[0,(b - gamma32)/gamma13]],Max[0,(-b + gamma12 + gamma13 + gamma32 + gamma33)/(gamma32 + gamma33 - 1)],Min[1,b/gamma32],Min[1,Max[0,(b - gamma12 - gamma13 - gamma32)/gamma33]]},
 	{1,Min[1,Max[0,(b - gamma32 - gamma33)/gamma12]],Min[1,Max[0,(b - gamma12 - gamma32 - gamma33)/gamma13]],0,Min[1,(b + gamma12 + gamma13 - gamma32 - gamma33)/gamma12],Min[1,Max[0,(b + gamma13 - gamma32 - gamma33)/gamma13]],Max[0,(-b + gamma12 + gamma13 + gamma32 + gamma33)/(gamma32 + gamma33 - 1)],1,1},
 	{0,Min[1,b/gamma12],1,1,1,0,Min[1,Max[0,(-b + gamma12 + gamma32)/(gamma32 + gamma33 - 1)]],Min[1,Max[0,(b - gamma12)/gamma32]],Max[0,(b - gamma12 + gamma33 - 1)/gamma33]},
 	{1,1,Min[1,(b + gamma13 - gamma33)/gamma13],0,0,Min[1,Max[0,(b - gamma33)/gamma13]],Max[0,(-b + gamma13 + gamma32 + gamma33)/(gamma32 + gamma33 - 1)],Min[1,Max[0,(b - gamma13 - gamma33)/gamma32]],1},
@@ -257,56 +269,55 @@ mass = {{0,Min[1,Max[0,(b - gamma13 - gamma32)/gamma12]],1,1,1,Min[1,Max[0,(b - 
 	{1,1,1,0,Min[1,b/gamma12],Max[0,(b - gamma12 + gamma32 + gamma33 - 1)/gamma13],Min[1,Max[0,(-b + gamma12)/(gamma32 + gamma33 - 1)]],0,0},
 	{0,1,0,1,Max[0,(b + gamma32 - 1)/gamma12],Min[1,Max[0,(b + gamma13 + gamma32 - 1)/gamma13]],Min[1,(-b - gamma13 + gamma33)/(gamma32 + gamma33 - 1)],0,1}
 };
+massLiSven={1-b,1-b,1-b,b,b,b,b,b,b};
 
 
-(* ::Subsubsection:: *)
+CheckMassRand[mass_]:={gamma11,gamma12,gamma13,gamma11,gamma12,gamma13,
+		1-gamma32-gamma33,gamma32,gamma33}.(mass-{a,a,a,b,b,b,b,b,b}) /.
+		{a->1-b}/.({gamma12->#1,gamma13->(1-#1)#2,gamma32->#1*#3,gamma33->(1-#1)#2*#4,b->#3}&@@RandomReal[{0,1},5])
+ParallelTable[Chop@Max@Table[CheckMassRand@m,{i,1,100}],{m,rawMass}] (* probabilistically check if the mass balances; it should equal zero *)
+
+
+(* ::Subsubsection::Closed:: *)
 (*Variables and Constraints:*)
 
 
-Length@mass
-(*mass=mass/.{gamma32->Min[gamma12,0.9999999-gamma33]};
-mass=mass/.{gamma33->Min[0.9999998,gamma13]};*)
-algs=cost@@#&/@mass;
-algsWithMass=Table[{algCost->cost@@mass[[i]],algMass->Style[mass[[i]],PrintPrecision->2],algIndex->i},{i,1,Length[mass]}];
-constrAlg = X<=#&/@algs;
+algs=Append[cost@@#&/@rawMass,costLiSven];
+mass=Append[rawMass,massLiSven];
+Length@algs
+algsWithMass=Table[{algCost->algs[[i]],algMass->Style[mass[[i]],PrintPrecision->2],algIndex->i},{i,1,Length@mass}];
+constrAlg = Z<=#&/@algs;
 
-
-(*## # Copy and paste from python script ## #*)
-varD1 = {d111,d112,d113,d121,d122,d123,d131,d132,d133,d1131,d1132,d1133,d1231,d1232,d1233,d1331,d1332,d1333};
-varD2 = {d211,d212,d213,d221,d222,d223,d231,d232,d233,d311,d312,d313,d321,d322,d323,d331,d332,d333};
 gammaVar1 = {gamma12,gamma13};
 gammaVar3 = {gamma32,gamma33};
 varNonLin = Union[gammaVar1,gammaVar3,{b,g1,g2}];
-(*## ## ##*)
-vars=Union[varD1,varD2,{X},gammaVar1,gammaVar3];
+vars=Union[varD1,varD2,{Z},varNonLin];
 (*constrD1D2=MapThread[#1<=#2&,{varD2,varD1}];*)
-constrBasic = Join[{X>=0,0<=b<=1},#>=0&/@Union[varD1,varD2,gammaVar1,gammaVar3],MapThread[#1<=#2&,{gammaVar3,gammaVar1}],{Total[gammaVar3]<=1},{Total[varD1]*(1-b)+Total[varD2]*b==1}];
-constrAlgLiSven = X<=b*(3-2b)Total[varD2]+(1-b)*Total[varD1];
-(* TODO: Define gamma3s in terms of gamma1s to reduce number of non-linear variables, might probably reduce execution time(?) *)
+constrBasic = Join[{Z>=0,0<=b<=1},#>=0&/@Union[varD1,varD2,gammaVar1,gammaVar3]
+	,MapThread[#1<=#2&,{gammaVar3,gammaVar1}],{Total[gammaVar1]<=1, Total[varD1]*(1-b)+Total[varD2]*b==1}];
+(* TODO: Define gamma3s in terms of gamma1s to reduce number of non-linear variables, might reduce execution time(?) *)
 
 
-(* ::Text:: *)
-(*We will fix the value of g1,g2, and let the adversary set the mass variable gamma*)
-
-
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Define NLP*)
 
 
-(* TODO allow specify starting point? *)
-SolveNLPX[g1hat_,g2hat_,iter_,algI_,constrExtra_:{}]:=
-	NMaximize[{X, constrAlg[[algI]], constrBasic, constrAlgLiSven, g1==g1hat, g2==g2hat, constrExtra,
-		.63 <= b <= .74, .001 <= gamma12 <= .99, .001 <= gamma13 <= .99, X>=0, (* manual hints. some problems with gamma12->0, but also maybe valid *)
-		.01<=gamma32+gamma33<=.99, .0001<=gamma32, .0001<=gamma33 (* hints *)
-	}, vars~Union~{g1,g2}, MaxIterations->iter][[2]]~Join~{g1->g1hat,g2->g2hat}
-SolveNLP[g1hat_,g2hat_,iter_,algI_:;;]:=SolveNLPX[g1hat,g2hat,iter,algI,{}]
+(* type checking: needed for multiple optional arguments and generally helpful for debugging *)
+IndexQ[i_]:=(i==All || i==(1;;All) || And@@IntegerQ/@i) (* allow passing ;; or All for index subset *)
+EquationQ[eq_]:=Not@FreeQ[eq,(Equal|LessEqual|Less|Greater|GreaterEqual)]||eq (* contains one of =,<,<=,>,>=, or trivially true *)
 
-(*SolveNLP[g1hat,g2hat,100]*)
-
+defaultHints={.6 <= b <= .8, .01 <= gamma12 <= .99, .01 <= gamma13 <= .99, Z>=.5,
+		.01<=gamma32+gamma33<=.99, .01<=gamma32, .01<=gamma33};
+SolveNLP[g1hat_,g2hat_,iter_,algI_,hints_:defaultHints]:=
+	NMaximize[{Z, constrAlg[[algI]], constrBasic, g1==g1hat, g2==g2hat, hints
+		}, vars~Union~{g1,g2}, MaxIterations->iter][[2]]
+SolveNLP[g1hat_,iter_,algI_:;;]:=SolveNLP[g1hat,iter,algI,defaultHints]
 
 (* If we fix non-linear variables, remaining system is linear and very fast/accurate *)
-SolveLP[nonLinParams_,algI_:;;]:=Maximize[{X, constrAlg[[algI]], constrBasic, constrAlgLiSven}/.nonLinParams,Union[varD1,varD2,{X}]][[2]]~Join~nonLinParams;
-SolveLPatSol[fullSol_,algI_:;;]:=SolveLP[ExtractNonLin[fullSol], algI]
+SolveLP[nonLinParams_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=
+	Maximize[{Z, constrAlg[[algI]], constrBasic, constrExtra}/.nonLinParams,
+		Union[varD1,varD2,{Z}]][[2]]~Join~nonLinParams;
+SolveLPatSol[fullSol_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=SolveLP[ExtractNonLin[fullSol], algI,constrExtra]
 ExtractNonLin[sol_]:=Select[sol,MemberQ[varNonLin,#[[1]]]&]
 
 
@@ -317,14 +328,15 @@ ExtractNonLin[sol_]:=Select[sol,MemberQ[varNonLin,#[[1]]]&]
 EvaluateAlgs[params_,algIset_:;;]:=(
 		{algCost, Style[algMass,PrintPrecision->2], algIndex}/.#&/@algsWithMass[[algIset]]
 	)/.params
-EvaluateAlgsNice[params_,algIset_:;;]:=Grid[SortBy[EvaluateAlgs[params,algIset],First]~Prepend~{"Alg Cost ", "Alg Mass","Alg Index"},Alignment->Left]
-EvaluateAlgsNice2[params_,algIset_:;;]:=Grid[SortBy[EvaluateAlgs[params,algIset],#[[2]]&]~Prepend~{"Alg Cost ", "Alg Mass","Alg Index"},Alignment->Left]
-EvaluateAlgsNice3[params_,algIset_:;;]:=Grid[SortBy[EvaluateAlgs[params,algIset],#[[3]]&]~Prepend~{"Alg Cost ", "Alg Mass","Alg Index"},Alignment->Left]
+EvaluateAlgsByCost[params_,algIset_:;;]:=Grid[SortBy[EvaluateAlgs[params,algIset],First]~Prepend~{"Alg Cost ", "Alg Mass","Alg Index"},Alignment->Left]
+EvaluateAlgsByMass[params_,algIset_:;;]:=Grid[SortBy[EvaluateAlgs[params,algIset],#[[2]]&]~Prepend~{"Alg Cost ", "Alg Mass","Alg Index"},Alignment->Left]
+EvaluateAlgsByIndex[params_,algIset_:;;]:=Grid[SortBy[EvaluateAlgs[params,algIset],#[[3]]&]~Prepend~{"Alg Cost ", "Alg Mass","Alg Index"},Alignment->Left]
 
 
 (* assumes gamma3s don't matter *)
 (*todo adjust more subetly and only if needed *)
-FixGamma3s[params_]:=Select[params,Not@MemberQ[{gamma32,gamma33},#[[1]]]&]~Join~{gamma32->(gamma12/2/.params),gamma33->(gamma13/2/.params)}
+FixGamma3s[params_]:=Join[Select[params,Not@MemberQ[{gamma32,gamma33},#[[1]]]&],
+			            {gamma32->(gamma12/2/.params),gamma33->(gamma13/2/.params)}]
 ExtractNonLinX[sol_]:=Select[sol,Not@MemberQ[varD1~Union~varD2,#[[1]]]&]
 
 
@@ -332,14 +344,14 @@ ExtractNonLinX[sol_]:=Select[sol,Not@MemberQ[varD1~Union~varD2,#[[1]]]&]
 (*Best Result (1.305731)*)
 
 
-algsI29={5,9,13,20,24,27,35,41,42,44,49,50,52,55,71,76,79,85,90,108,118,123,124,127,140,146,152,155,161};
+algsI29={-1,5,9,13,20,24,27,35,41,42,44,49,50,52,55,71,76,79,85,90,108,118,123,124,127,140,146,152,155,161};
 Length@algsI29
 solBest={b->0.6715331873666895`,d111->0.046860368382269514`,d112->0.02456331335018877`,d113->0.044074854304643814`,d1131->0.07144707077351625`,d1132->0.02986653206436148`,d1133->0.061099227368884346`,d121->0.04695211510711601`,d122->0.0752748957991086`,d123->0.13931896491196272`,d1231->0.05883468012890778`,d1232->0.024422132431967978`,d1233->0.050364903626525424`,d131->0.07457214633931589`,d132->0.061522492525401866`,d133->0.11153079587680949`,d1331->0.3156463103941929`,d1332->0.12667137180358412`,d1333->0.26456720159876934`,d211->1.3055804129059156`*^-10,d212->0.013885414272666036`,d213->0.02619922345614402`,d221->1.3055806300140836`*^-10,d222->0.024068020757453987`,d223->0.042253564881508485`,d231->1.3055745614447794`*^-10,d232->0.021952084030530877`,d233->0.0410386302990541`,d311->0.05434950802505862`,d312->0.021182405258084562`,d313->0.044979431676897816`,d321->0.04555546206374887`,d322->0.017939953371794066`,d323->0.037662673383040815`,d331->0.13291684395399628`,d332->0.055358001630245506`,d333->0.11368619189433839`,g1->0.642`,g2->0.833`,gamma12->0.21167853121269323`,gamma13->0.38689227778230223`,gamma32->0.18043327359652983`,gamma33->0.3749367318689848`,X->1.3057309344455876`,g1->0.642`,g2->0.833`};
 {g1hat,g2hat}={g1,g2}/.solBest
 (* should reproduce solBest, may need 2000 iterations *)
-(*SolveNLP[g1/.solBest,g2/.solBest,10,algsI34]*)
+{time,sol}=Timing@SolveNLP[g1/.solBest,g2/.solBest,100,algsI34] (*for better results, use 1000 iterations*)
 SolveLPatSol[solBest,algsI29]
-X/.%
+Z/.%
 
 
 (* ::Text:: *)
@@ -355,11 +367,11 @@ X/.%
 
 
 {g1hat,g2hat}={.6,.85};
-algsI32={161,51,118,52,41,124,5,10,42,79,27,49,140,146,85,71,24,9,76,155,20,64,50,71,55,122,127,13,123,90,35,152};
+algsI32={-1,161,51,118,52,41,124,5,10,42,79,27,49,140,146,85,71,24,9,76,155,20,64,50,71,55,122,127,13,123,90,35,152};
 {g1hat,g2hat}={.64,.84};
-algsI33={51,118,52,41,124,5,10,42,79,27,49,140,146,85,71,24,9,76,155,20,64,50,71,55,122,127,13,123,90,35,152,44,161};
+algsI33={-1,51,118,52,41,124,5,10,42,79,27,49,140,146,85,71,24,9,76,155,20,64,50,71,55,122,127,13,123,90,35,152,44,161};
 {g1hat,g2hat}={.645,.83};
-algsI34={51,118,52,41,124,5,10,42,79,27,49,140,146,85,71,24,9,76,155,20,64,50,71,55,122,127,13,123,90,35,152,44,161,108};
+algsI34={-1,51,118,52,41,124,5,10,42,79,27,49,140,146,85,71,24,9,76,155,20,64,50,71,55,122,127,13,123,90,35,152,44,161,108};
 {g1hat,g2hat}={.64,.83}
 algsI28=Complement[algsI34,{5,10,64,122,51}];
 algsI29=algsI28~Union~{5};
@@ -380,6 +392,7 @@ While[Length[loopAlgsI]<maxIndices,
 		(* if there's no good algo to add, cycle an old one instead *)
 		Print["No improvement. Removing "<>ToString@loopAlgsI[[1]]]<>": "<>ToString@loopAlgsI; loopAlgsI = loopAlgsI[[2;;]]
 	]
+	(* TODO make inner loop to re-run LP until no improvement == much faster *)
 ]
 
 
@@ -466,7 +479,7 @@ General::stop: "Further output of \!\(\*StyleBox[\(StringJoin :: string\), \"Mes
 *)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Explore Tight Solution*)
 
 
@@ -474,8 +487,8 @@ General::stop: "Further output of \!\(\*StyleBox[\(StringJoin :: string\), \"Mes
 (*Here we can explore if adding the full set of constraints does not improve over the minimal set of 32.*)
 
 
-solFullI=SolveLPatSol[solBest];X/.solFullI
-solI29=SolveLPatSol[solBest,algsI29];X/.solI29
+solFullI=SolveLPatSol[solBest];Z/.solFullI
+solI29=SolveLPatSol[solBest,algsI29];Z/.solI29
 {g1,g2}/.solI29
 
 
@@ -483,7 +496,7 @@ solI29=SolveLPatSol[solBest,algsI29];X/.solI29
 (*We can use the full set of algorithms or our minimal set. We can tweak things and see that it looks maximal. Also we see that gamma32 and gamma33 don't affect the maximum.*)
 
 
-sol=solI28;
+sol=solI29;
 
 
 Manipulate[{X/.#,solTemp=#;#}&@SolveLPatSol[{g1->(g1/.sol),g2->(g2/.sol),b->mb,gamma12->mgamma12,gamma13->mgamma13,gamma32->mgamma32,gamma33->mgamma33},algsI28]
@@ -493,26 +506,14 @@ Manipulate[{X/.#,solTemp=#;#}&@SolveLPatSol[{g1->(g1/.sol),g2->(g2/.sol),b->mb,g
 (* need 5 or 31 for smaller gamma33 *)
 algsIm=All;
 algsIm=algsI34~Select~(Not@MemberQ[{(*9,42*)},#]&);
-Manipulate[EvaluateAlgsNice[#,algsIm]&@SolveLPatSol[
+Manipulate[EvaluateAlgsByMass[#,algsIm]&@SolveLPatSol[
 {g1->(g1/.sol),g2->(g2/.sol),b->mb,gamma12->mgamma12,gamma13->mgamma13,gamma32->mgamma32,gamma33->mgamma33},algsI34]
 	,{{mb,b/.sol},0,1,.0001},{{mgamma12,gamma12/.sol},0,1,.001},{{mgamma13,gamma13/.sol},0,1,.001},{{mgamma32,gamma32/.sol},0,1},{{mgamma33,gamma33/.sol},0,1}]
 
 
 (* TODO why discrepency here but not below ??? *)
-X/.SolveLPatSol[{gamma33->.2}~Join~sol,algsI28]
-X/.SolveLPatSol[sol,algsI28]
-
-
-sol=solI28;
-(*fullPlot=Plot3D[X/.SolveLPatSol[{g1->(g1/.sol),g2->(g2/.sol),b->(b/.sol),gamma12->mgamma12,gamma13->mgamma13,gamma32->.001,gamma33->.001},algsI28],
-	{mgamma12,0.001,.9},{mgamma13,0.001,.9},PlotRange->{1.3055,1.306},PerformanceGoal:>"Quality"];*)
-
-
-tp1={g1->(g1/.sol),g2->(g2/.sol),b->(b/.sol),gamma12->(gamma12/.sol),gamma13->(gamma13/.sol),gamma32->.001,gamma33->.001}
-tp2={g1->(g1/.sol),g2->(g2/.sol),b->(b/.sol),gamma12->(gamma12/.sol),gamma13->(gamma13/.sol),gamma32->.001,gamma33->.200}
-X/.SolveLPatSol[tp1,algsI28]
-X/.SolveLPatSol[tp2,algsI28]
-X/.SolveLPatSol[{gamma33->.2}~Join~tp1,algsI28]
+Z/.SolveLPatSol[{gamma33->.2}~Join~sol,algsI28]
+Z/.SolveLPatSol[sol,algsI28]
 
 
 fullPlot=Plot3D[(X/.SolveLPatSol[{g1->(g1/.sol),g2->(g2/.sol),b->(b/.sol),gamma12->mgamma12,gamma13->mgamma13,gamma32->.001,gamma33->.001},algsI28])
@@ -524,6 +525,7 @@ fullPlot=Plot3D[(X/.SolveLPatSol[{g1->(g1/.sol),g2->(g2/.sol),b->(b/.sol),gamma1
 (*Optimize g*)
 
 
+(* used this to run batch jobs, to check grids of g values *)
 sampleG12=Flatten[Table[{g1,g2+(g1-.641)},{g1,.642,.644,.001},{g2,.831,.835,.001}],1]
 sampleG12={}
 Length@sampleG12
