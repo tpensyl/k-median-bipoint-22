@@ -483,6 +483,17 @@ General::stop: "Further output of \!\(\*StyleBox[\(StringJoin :: string\), \"Mes
 (*Explore Tight Solution*)
 
 
+sol=solBest
+algsIm=algsI34~Select~(Not@MemberQ[{(*9,42*)},#]&);
+Manipulate[EvaluateAlgsByMass[#,algsIm]&@SolveLPatSol[
+{g1->(g1/.sol),g2->(g2/.sol),b->mb,gamma12->mgamma12,gamma13->mgamma13,gamma32->mgamma32,gamma33->mgamma33},algsI34]
+	,{{mb,b/.sol},0,1,.0001},{{mgamma12,gamma12/.sol},0,1,.001},{{mgamma13,gamma13/.sol},0,1,.001},{{mgamma32,gamma32/.sol},0,1},{{mgamma33,gamma33/.sol},0,1}]
+
+
+(* ::Subsubsection::Closed:: *)
+(*Other*)
+
+
 (* ::Text:: *)
 (*Here we can explore if adding the full set of constraints does not improve over the minimal set of 32.*)
 
@@ -522,6 +533,62 @@ fullPlot=Plot3D[(X/.SolveLPatSol[{g1->(g1/.sol),g2->(g2/.sol),b->(b/.sol),gamma1
 
 
 (* ::Subsection:: *)
+(*Dual*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*Definition*)
+
+
+Protect[u];
+ToDual[algs_,varsD1_,varsD2_]:=Module[{varsU},
+varsU=Table[u[i],{i,1,Length@algs}];
+{{alpha, Join[
+	#<=(1-b)alpha&/@( varsU.Table[Coefficient[alg,var],{alg,algs},{var,varsD1}] ),
+	#<=b*alpha&/@( varsU.Table[Coefficient[alg,var],{alg,algs},{var,varsD2}] ),
+	{Total[varsU]>=1}, #>=0&/@varsU]
+}, varsU~Append~alpha}
+]
+SolveDualLP[nonLinParams_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=Module[{tdual, dualOpt, dualSol},
+	tdual = ToDual[algs[[algI]],varD1,varD2];
+	{dualOpt, dualSol} = Minimize[Append[tdual[[1]],constrExtra]/.ExtractNonLin@nonLinParams,tdual[[2]]];
+	dualSol
+]~Join~nonLinParams
+EvaluateDual[params_,algIset_:;;]:=Join[
+	{{"u[alg]", "Alg Mass","Global Index","Local Index"}},
+	Table[{u[i], Style[algMass,PrintPrecision->2], algIndex, i}/.algsWithMass[[algIset[[i]]]],{i,1,Length[algIset]}]
+]/.params
+
+
+
+algsI=algsI29
+solDual=SolveDualLP[sol,algsI]
+Grid@SortBy[EvaluateDual[%,algsI],#[[2]]&]
+
+
+(* ::Subsubsection:: *)
+(*Manipulate*)
+
+
+(* Initialize manipulate *)
+{b0,g10,g20,gamma120,gamma130,gamma320,gamma330}={b,g1,g2,gamma12,gamma13,.01,.01}/.sol;
+
+
+BigFractionStyle = Style[#, DefaultOptions -> {FractionBoxOptions -> {AllowScriptLevelChange -> False}}] &;
+algsI=algsI29;
+constrExtra={};
+Manipulate[
+	{tb,tg1,tg2,tgamma12,tgamma13,tgamma32,tgamma33}={pb,pg1,pg2,pgamma12,pgamma13,pgamma32,pgamma33}; (* allow saving of modifications *)
+    msolDual = SolveDualLP[{b->pb,gamma12->pgamma12,gamma13->pgamma13,gamma32->pgamma32,gamma33->pgamma33,g1->pg1,g2->pg2},algsI
+		,{u[i1]<=1-eps1,u[i2]<=1-eps1}];
+	mCombo=Total[u[#]*mass[[algsI[[#]]]]&/@{i1,i2}]/Total[u[#]&/@{i1,i2}] /.msolDual;
+    BigFractionStyle@Column@{alpha, Grid@SortBy[EvaluateDual[msolDual,algsI],#[[2]]&],{"i1/i2 combo", mCombo}}/.msolDual
+   ,{{pb,b0},0,1,.001},{{pg1,g10},.01,1,.001},{{pg2,g20},.01,1,.001},{{pgamma12,gamma120},.01,1.5,.001}
+   ,{{pgamma13,gamma130},.01,1,.001},{{pgamma32,gamma320},.01,1,.001},{{pgamma33,gamma330},.01,1,.001}
+   ,{eps1,0,.999,.01},{i1,1,Length@algsI,1},{i2,2,Length@algsI,1}]
+
+
+(* ::Subsection::Closed:: *)
 (*Optimize g*)
 
 
