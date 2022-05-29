@@ -12,6 +12,7 @@ SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->9]
 SetOptions[Plot3D, AxesLabel->Automatic,
 	PlotStyle->Opacity[.7], ClippingStyle->None,
 	BoundaryStyle -> Directive[Black, Thick]];
+Import@FileNameJoin[{ParentDirectory[NotebookDirectory[]],"util","visualizeMass.m"}]
 
 
 (* ::Subsection::Closed:: *)
@@ -287,7 +288,7 @@ ParallelTable[Chop@Max@Table[CheckMassRand@m,{i,1,100}],{m,rawMass}] (* probabil
 algs=Append[cost@@#&/@rawMass,costLiSven];
 mass=Append[rawMass,massLiSven];
 Length@algs
-algsWithMass=Table[{algCost->algs[[i]],algMass->Style[mass[[i]],PrintPrecision->2],algIndex->i},{i,1,Length@mass}];
+algsWithMass=Table[{algCost->algs[[i]],algMass->mass[[i]],algIndex->i},{i,1,Length@mass}];
 constrAlg = Z<=#&/@algs;
 
 gammaVar1 = {gamma12,gamma13};
@@ -353,7 +354,7 @@ Length@algsI
 solBest={b->0.6715331873666895`,d111->0.046860368382269514`,d112->0.02456331335018877`,d113->0.044074854304643814`,d1131->0.07144707077351625`,d1132->0.02986653206436148`,d1133->0.061099227368884346`,d121->0.04695211510711601`,d122->0.0752748957991086`,d123->0.13931896491196272`,d1231->0.05883468012890778`,d1232->0.024422132431967978`,d1233->0.050364903626525424`,d131->0.07457214633931589`,d132->0.061522492525401866`,d133->0.11153079587680949`,d1331->0.3156463103941929`,d1332->0.12667137180358412`,d1333->0.26456720159876934`,d211->1.3055804129059156`*^-10,d212->0.013885414272666036`,d213->0.02619922345614402`,d221->1.3055806300140836`*^-10,d222->0.024068020757453987`,d223->0.042253564881508485`,d231->1.3055745614447794`*^-10,d232->0.021952084030530877`,d233->0.0410386302990541`,d311->0.05434950802505862`,d312->0.021182405258084562`,d313->0.044979431676897816`,d321->0.04555546206374887`,d322->0.017939953371794066`,d323->0.037662673383040815`,d331->0.13291684395399628`,d332->0.055358001630245506`,d333->0.11368619189433839`,g1->0.642`,g2->0.833`,gamma12->0.21167853121269323`,gamma13->0.38689227778230223`,gamma32->0.18043327359652983`,gamma33->0.3749367318689848`,Z->1.3057309344455876`,g1->0.642`,g2->0.833`};
 {g1hat,g2hat}={g1,g2}/.solBest
 (* should reproduce solBest, may need 2000 iterations *)
-{time,sol}=Timing@SolveNLP[g1/.solBest,g2/.solBest,1000,algsI] (*for better results, use 1000 iterations*)
+{time,sol}=Timing@SolveNLP[g1/.solBest,g2/.solBest,100,algsI] (*for better results, use 1000 iterations*)
 SolveLPatSol[solBest,algsI]
 Z/.%
 
@@ -560,13 +561,14 @@ SolveDualLP[nonLinParams_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=Mod
 ]~Join~nonLinParams
 EvaluateDual[params_,algIset_:;;]:=Join[
 	{{"u[alg]", "Alg Mass","Global Index","Local Index"}},
-	Table[{u[i], Style[algMass,PrintPrecision->2], algIndex, i}/.algsWithMass[[algIset[[i]]]],{i,1,Length[algIset]}]
+	Table[{u[i], Style[algMass,PrintPrecision->2], VisualMass[algMass,3,ImageSize->15],
+			 algIndex, i}/.algsWithMass[[algIset[[i]]]],{i,1,Length[algIset]}]
 ]/.params
 
 
-
 algsI=algsI30
-solDual=SolveDualLP[sol,algsI]
+sol=solBest;
+solDual=SolveDualLP[sol,algsI];
 Grid@SortBy[EvaluateDual[%,algsI],#[[2]]&]
 
 
