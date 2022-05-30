@@ -201,7 +201,7 @@ algsI3={-1,34,35,36};
 algsI6sym={-1,29,30,31,32,33,37}; (* 36 is cost-equivalent to a convex combination of 2 valid algos *)
 algsI=algsI6sym
 ghat=0.6586066
-solNLP=SolveNLP[ghat,300,algsI]
+solNLP=SolveNLP[ghat,300,algsI] (* for much higher speed and accuracy, use exactSolutionForm from later on *)
 
 
 sol=SolveLPatSol[solNLP,algsI6sym(*, constrD1D2~Union~constrD1D2g*)];
@@ -386,8 +386,8 @@ time
 result
 
 
-(* ::Subsubsection:: *)
-(*Dual feasibility*)
+(* ::Subsubsection::Closed:: *)
+(*Exact Dual feasibility*)
 
 
 (* Can we use this closed form as a dual feasible solution? *)
@@ -746,6 +746,11 @@ feasZoneReq2=%[[1]];
 RegionPlot3D[And[feasZoneReq1,feasZoneReq2],{b,0,1},{gammaB,0,2},{g,0,1},AxesLabel->Automatic]
 
 
+(* infeasibility zone worst cost is 1.274 , so seems safely away from the critical area.*)
+sol1=SolveNLP[ghat,300,algsI,{(1-g) gammaB>=b}]
+sol2=SolveNLP[ghat,300,algsI,{gammaB<=g (1+2 b^2+gammaB+(-2+g) gammaB^2-b (3+gammaB))}]
+
+
 (* ::Subsubsection::Closed:: *)
 (*Explore DUAL - combining the F1=0 cases*)
 
@@ -866,25 +871,20 @@ Plot[{u[4],u[5]}/(u[4]+u[5])/.SolveDualLP[{b->(b/.sol),gammaB->pgammaB,gammaC->.
 (**)
 
 
-(* ::Subsection:: *)
-(*Result*)
-
-
-exactSolutionForm=(-2+4 b-2 b^2-g+b g-3 \[Gamma]+2 b \[Gamma]-5 g \[Gamma]+9 b g \[Gamma]-4 b^2 g \[Gamma]-6 g \[Gamma]^2+4 b g \[Gamma]^2+g^2 \[Gamma]^2)/(-2+4 b-2 b^2-g+3 b g-4 b^2 g+2 b^3 g-3 \[Gamma]+4 b \[Gamma]-2 b^2 \[Gamma]-5 g \[Gamma]+11 b g \[Gamma]-8 b^2 g \[Gamma]+2 b^3 g \[Gamma]-6 g \[Gamma]^2+8 b g \[Gamma]^2-4 b^2 g \[Gamma]^2+g^2 \[Gamma]^2-2 b g^2 \[Gamma]^2+2 b^2 g^2 \[Gamma]^2)
-exactSolutionForm=exactSolutionForm/.\[Gamma]->gammaB;
-
-
-(* ::Text:: *)
-(*Exact form found by guessing the form, and fitting exact rational-valued tuples (b,gamma,g) and their solutions. (This approach could perhaps be just as easily be be applied to the LP instead of the dual.)*)
-(**)
-(*Or at least, this is the exact form in the critical region.*)
-
-
 (* ::Section:: *)
 (*Exact form*)
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsection:: *)
+(*Result*)
+
+
+(* Exact form (for some critical region - see Exact Dual feasibility) found in Dual -> Automate Rational Form-Finding. Hard-coded here. *)
+exactSolutionForm=(-2+4 b-2 b^2-g+b g-3 \[Gamma]+2 b \[Gamma]-5 g \[Gamma]+9 b g \[Gamma]-4 b^2 g \[Gamma]-6 g \[Gamma]^2+4 b g \[Gamma]^2+g^2 \[Gamma]^2)/(-2+4 b-2 b^2-g+3 b g-4 b^2 g+2 b^3 g-3 \[Gamma]+4 b \[Gamma]-2 b^2 \[Gamma]-5 g \[Gamma]+11 b g \[Gamma]-8 b^2 g \[Gamma]+2 b^3 g \[Gamma]-6 g \[Gamma]^2+8 b g \[Gamma]^2-4 b^2 g \[Gamma]^2+g^2 \[Gamma]^2-2 b g^2 \[Gamma]^2+2 b^2 g^2 \[Gamma]^2)
+exactSolutionForm=exactSolutionForm/.\[Gamma]->gammaB;
+
+
+(* ::Subsection::Closed:: *)
 (*High Precision g*)
 
 
@@ -894,7 +894,7 @@ ListPlot[tpoints]
 SortBy[tpoints,Last][[1,1]]*)
 
 
-(* ::Subsubsection:: *)
+(* ::Subsection:: *)
 (*Maximize in gammaB*)
 
 
@@ -936,16 +936,7 @@ Manipulate[
 ,{{ghat1,.642},0.001,1},{{ghat2,.6586},0.001,1},{{ghat3,.833},0.001,1}]
 
 
-(* ::Subsubsection::Closed:: *)
-(*Infeasibility Zone*)
-
-
-(* infeasibility zone worst cost is 1.274 , so seems safely away from the critical area.*)
-sol1=SolveNLP[ghat,300,algsI,{(1-g) gammaB>=b}]
-sol2=SolveNLP[ghat,300,algsI,{gammaB<=g (1+2 b^2+gammaB+(-2+g) gammaB^2-b (3+gammaB))}]
-
-
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Previous Exploration*)
 
 
@@ -1002,7 +993,7 @@ sol=SolveLPatSol[solNLP,algsI];
 Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Explore Tight Point*)
 
 
