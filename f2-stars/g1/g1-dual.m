@@ -200,11 +200,11 @@ algsI5={-1,4,8,23,34,35};
 algsI3={-1,34,35,36};
 algsI6sym={-1,29,30,31,32,33,37}; (* 36 is cost-equivalent to a convex combination of 2 valid algos *)
 algsI=algsI6sym
-ghat=0.6586
+ghat=0.6586066
 solNLP=SolveNLP[ghat,300,algsI]
 
 
-sol=SolveLPatSol[solNLP,algsI10(*, constrD1D2~Union~constrD1D2g*)];
+sol=SolveLPatSol[solNLP,algsI6sym(*, constrD1D2~Union~constrD1D2g*)];
 Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
@@ -213,11 +213,11 @@ Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
 (* ::Text:: *)
-(*By setting g=.6586, we get approximation factor 1.31019*)
+(*By setting g=0.6586066, we get approximation factor 1.310188885063*)
 (**)
-(*This file gives several possible algo sets to achieve this. *)
+(*This file gives several possible algo sets to achieve this. Also a closed form solution for the critical region. *)
 (**)
-(*Some of the later algorithms are not directly feasible, but are cost equivalent to convex combination of valid algos. (e.g. as long as p2b+p2c>=1*)
+(*Some of the later algorithms are not directly feasible, but are cost equivalent to convex combination of valid algos. (e.g. as long as p2b+p2c>=1)*)
 (**)
 (*This NLP could be simplified by padding such that |F2C|=min{|F2B|,|Y|}, to fix gammaC:=Min[1,gammaB]. Or using something like alg6sym, the need for variable gammaC vanishes entirely.*)
 
@@ -335,7 +335,6 @@ MergeAlgos[algsI_List, algsII_List, form_]:=Module[{data,fits,forms},
 	Column@ExpandDenominator@ExpandNumerator@Simplify@forms
 ]
 algsItemp=algsI3;
-form=(a1+a2*x+a3*x^2+a4*x^3)/(1+b1*x+b2*x^2+b3*x^3)/.{x->b};
 form=Sum[v[1,i]*x^i,{i,0,3}]/
      Sum[v[2,i]*x^i,{i,0,3}]/. {v[2,0]->1, x->g}
 MergeAlgos[algsItemp,{1,2,3,4},form]
@@ -883,6 +882,33 @@ exactSolutionForm=exactSolutionForm/.\[Gamma]->gammaB;
 
 (* ::Section:: *)
 (*Exact form*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*High Precision g*)
+
+
+(*SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->22]
+tpoints=Table[{g, NMaximize[{exactSolutionForm,0<b<1,0<gammaB},{b,gammaB},PrecisionGoal->15,AccuracyGoal->15,MaxIterations->10000][[1]]},{g,.65860655,.65860665,.00000001}]
+ListPlot[tpoints]
+SortBy[tpoints,Last][[1,1]]*)
+
+
+(* ::Subsubsection:: *)
+(*Maximize in gammaB*)
+
+
+(* maximum should occur when either the derivative is zero, or at a boundary point *)
+gammaBXVertex = Solve[D[exactSolutionForm,gammaB]==0,gammaB]//FullSimplify;
+gammaBXCrit = Join[gammaBXVertex,{{gammaB->0},{gammaB->Infinity}}];
+(* restrict to real and non negative critical values of gammaB *)
+gammaBXValid = Piecewise[{{Limit[exactSolutionForm,#[[1]]],Im[gammaB]==0&&gammaB>=0}/.#},-Infinity]&/@gammaBXCrit;
+(*gammaBXMax = Max@@FullSimplify[gammaBXValid,{0<b<1,0<g}]*) (* It erroneously simplifies away the "Real" check *)
+Plot3D[Max@@gammaBXValid,{b,0.001,1},{g,0.001,1}]
+
+
+(* ::Subsection::Closed:: *)
+(*Randomization*)
 
 
 (* Can we use exact form to randomize or discretize? Assume for now we can handle the infeasible regions elsewhere *)
