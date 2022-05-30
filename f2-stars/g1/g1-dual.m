@@ -42,7 +42,7 @@ SetOptions[Plot3D, AxesLabel->Automatic,
 (*	Also, 0 <= \[Gamma]_C <= 1*)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Setting up the NLP:*)
 
 
@@ -153,7 +153,7 @@ constrBasic = Join[{Z>=0,0<=b<=1,0<=gammaB,0<=gammaC<=1,gammaC<=gammaB},#>=0&/@U
         ,{Total[varD1]*(1-b)+Total[varD2]*b==1}];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Utility Methods*)
 
 
@@ -222,7 +222,7 @@ Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 (*This NLP could be simplified by padding such that |F2C|=min{|F2B|,|Y|}, to fix gammaC:=Min[1,gammaB]. Or using something like alg6sym, the need for variable gammaC vanishes entirely.*)
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Dual*)
 
 
@@ -362,7 +362,7 @@ form=Sum[v[1,i,j]*x^i*y^j,{i,0,2},{j,0,2}]/
 {time,result}=Timing@MergeAlgos[algsItemp,{1,2,3,4},form]/.gammaB->\[Gamma]
 
 
-(* Detect all 3 vars? *)
+(* Detect all 3 vars. *)
 Clear[MergeAlgos]
 MergeAlgos[algsI_List, algsII_List, form_]:=Module[{data,fits,forms},
 	data=Transpose@Flatten[Table[
@@ -882,6 +882,10 @@ Plot[{u[4],u[5]}/(u[4]+u[5])/.SolveDualLP[{b->(b/.sol),gammaB->pgammaB,gammaC->.
 (* Exact form (for some critical region - see Exact Dual feasibility) found in Dual -> Automate Rational Form-Finding. Hard-coded here. *)
 exactSolutionForm=(-2+4 b-2 b^2-g+b g-3 \[Gamma]+2 b \[Gamma]-5 g \[Gamma]+9 b g \[Gamma]-4 b^2 g \[Gamma]-6 g \[Gamma]^2+4 b g \[Gamma]^2+g^2 \[Gamma]^2)/(-2+4 b-2 b^2-g+3 b g-4 b^2 g+2 b^3 g-3 \[Gamma]+4 b \[Gamma]-2 b^2 \[Gamma]-5 g \[Gamma]+11 b g \[Gamma]-8 b^2 g \[Gamma]+2 b^3 g \[Gamma]-6 g \[Gamma]^2+8 b g \[Gamma]^2-4 b^2 g \[Gamma]^2+g^2 \[Gamma]^2-2 b g^2 \[Gamma]^2+2 b^2 g^2 \[Gamma]^2)
 exactSolutionForm=exactSolutionForm/.\[Gamma]->gammaB;
+Clear[SolveX]
+SolveX[g1hat_,iter_:100]:=
+	NMaximize[{Z, Z<=exactSolutionForm, 0<b<1, 0<gammaB, g==g1hat},{b,gammaB,g,Z}, MaxIterations->iter][[2]]
+solX=SolveX[0.6586066,300]
 
 
 (* ::Subsection::Closed:: *)
@@ -895,16 +899,59 @@ SortBy[tpoints,Last][[1,1]]*)
 
 
 (* ::Subsection:: *)
+(*Analyze Maximum*)
+
+
+(* ::Subsubsection::Closed:: *)
 (*Maximize in gammaB*)
 
 
 (* maximum should occur when either the derivative is zero, or at a boundary point *)
-gammaBXVertex = Solve[D[exactSolutionForm,gammaB]==0,gammaB]//FullSimplify;
-gammaBXCrit = Join[gammaBXVertex,{{gammaB->0},{gammaB->Infinity}}];
+gammaBXVertex = Solve[D[exactSolutionForm,gammaB]==0,gammaB]//FullSimplify
+gammaBXCrit = Join[gammaBXVertex,{{gammaB->0},{gammaB->Infinity}}]~Simplify~{0<b<1,0<g<=1};
 (* restrict to real and non negative critical values of gammaB *)
 gammaBXValid = Piecewise[{{Limit[exactSolutionForm,#[[1]]],Im[gammaB]==0&&gammaB>=0}/.#},-Infinity]&/@gammaBXCrit;
 (*gammaBXMax = Max@@FullSimplify[gammaBXValid,{0<b<1,0<g}]*) (* It erroneously simplifies away the "Real" check *)
 Plot3D[Max@@gammaBXValid,{b,0.001,1},{g,0.001,1}]
+
+
+solX = SolveX[ghat,1000]
+gammaB/.gammaBXCrit/.solX (* looks like opts occurs at 2nd critical point *)
+(*Plot3D[gammaBXValid,{b,0.6,.75},{g,0.4,.9},PlotStyle->{Read,Green,Blue,Purple},PlotRange->{1.29,1.32}]*) (* confirm *)
+optXbg = FullSimplify[exactSolutionForm/.gammaBXCrit[[2]],{0<b<1,0<g<=1}]
+optXbgRegion = Simplify[(Im[gammaB]==0&&gammaB>=0)/.gammaBXCrit[[2]],{0<b<1,0<g<=1}]
+Plot3D[{optXbg,Z/.solX},{b,0.55,.75},{g,0.3,.9},RegionFunction->Function[{b,g,Z},optXbgRegion]]
+gammaB/.gammaBXCrit[[2]]/.solX (* note we are well away from zero - opt doesn't lie on boundary *)
+D[optXbg,{g,2}]; (* too complex to try to solve closed form for g *)
+(* the function is like a mountain pass: there's a single choke point, so setting g there is enough (vs as f(b)) *)
+
+
+(* ::Subsubsection::Closed:: *)
+(*Maximize in g*)
+
+
+(* Suppose we fix gamma and let the adversary set g. Complicating factor: adversary may also set gamma_max. Ignore for now *)
+gXVertex = Solve[D[exactSolutionForm,g]==0,g]~FullSimplify~{gammaB>0,0<b<1};
+(*gXDeterminant = Cases[g/.gXVertex, Power[_, 1/2], Infinity][[-1]]*)
+gXCrit = Join[gXVertex,{{g->0},{g->1}}]~Simplify~{0<b<1,0<gammaB}
+gXValid = Piecewise[{{Limit[exactSolutionForm,#[[1]]],Im[g]==0&&g>=0}/.#},-Infinity]&/@gXCrit;
+(*Plot3D[gXValid,{b,0.001,1},{gammaB,0.001,1.5},PlotStyle->{Red,Blue,Green,Purple}]*) (* Second critical point achieves max *)
+Plot3D[{gXValid[[2]],Z/.solX},{b,0.65,.69},{gammaB,0.45,.6}] (* Another saddle point. *)
+
+
+(* ::Subsubsection::Closed:: *)
+(*Maximize in b*)
+
+
+bXVertex = Solve[D[exactSolutionForm,b]==0,b]; (* 3 cubic solutions *)
+bXCrit = Join[bXVertex,{{b->0},{b->1}}];
+(*bXValid = Piecewise[{{exactSolutionForm,Im[b]==0&&b>=0}/.#},-Infinity]&/@bXCrit;*) (*M hangs trying to plot this*)
+(*bplotX=Plot3D[exactSolutionForm/.bXCrit[[#]],{g,0.001,1},{gammaB,0.001,1.2}
+	,PlotStyle->{Red,Blue,Green,Purple,Cyan}[[#]]]&/@Range[5]*) (*Takes awhile but works. first sol is usually max *)
+bplotN=Plot3D[NMaximize[{exactSolutionForm,0<b<1},{b}][[1]],{g,0.001,1},{gammaB,0.001,1.2}] (*easier to just maximize numerically*)
+
+
+Show[bplotN, Plot3D[Z/.solX,{g,0.001,1},{gammaB,0.001,1.2},PlotStyle->{Orange,Opacity[.6]}]]
 
 
 (* ::Subsection::Closed:: *)
