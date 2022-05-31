@@ -268,25 +268,42 @@ rawMass = {{0,Min[1,Max[0,(b - gamma13 - gamma32)/gamma12]],1,1,1,Min[1,Max[0,(b
 	{1,Max[0,(b + gamma12 - 1)/gamma12],Min[1,(b + gamma12 + gamma13 - gamma32 - gamma33)/gamma13],0,0,0,Min[1,Max[0,(-b - gamma12 + gamma32 + gamma33)/(gamma32 + gamma33 - 1)]],1,1},
 	{0,1,1,1,0,0,Min[1,Max[0,(-b + gamma32)/(gamma32 + gamma33 - 1)]],Min[1,b/gamma32],Max[0,(b + gamma33 - 1)/gamma33]},
 	{1,1,1,0,Min[1,b/gamma12],Max[0,(b - gamma12 + gamma32 + gamma33 - 1)/gamma13],Min[1,Max[0,(-b + gamma12)/(gamma32 + gamma33 - 1)]],0,0},
-	{0,1,0,1,Max[0,(b + gamma32 - 1)/gamma12],Min[1,Max[0,(b + gamma13 + gamma32 - 1)/gamma13]],Min[1,(-b - gamma13 + gamma33)/(gamma32 + gamma33 - 1)],0,1},
-	{0,1,0,1,Max[0,(-1+b+gamma13)/(gamma12+gamma13)],Max[0,(-1+b+gamma13)/(gamma12+gamma13)],Min[1,(-b-gamma13+gamma33)/(-1+gamma32+gamma33)],Min[1,Max[0,(-1+b+gamma13+gamma32)/gamma32]],1} (* 167: replace 9+42 (in crit region) *)
+	{0,1,0,1,Max[0,(b + gamma32 - 1)/gamma12],Min[1,Max[0,(b + gamma13 + gamma32 - 1)/gamma13]],Min[1,(-b - gamma13 + gamma33)/(gamma32 + gamma33 - 1)],0,1}
 };
 Length[rawMass]
 massLiSven={1-b,1-b,1-b,b,b,b,b,b,b};
 
 
+(* ::Subsubsection:: *)
+(*Handcrafted Hybrid Algorithms*)
+
+
 CheckMassRand[mass_]:={gamma11,gamma12,gamma13,gamma11,gamma12,gamma13,
 		1-gamma32-gamma33,gamma32,gamma33}.(mass-{a,a,a,b,b,b,b,b,b}) /.
 		{a->1-b}/.({gamma12->#1,gamma13->(1-#1)#2,gamma32->#1*#3,gamma33->(1-#1)#2*#4,b->#3}&@@RandomReal[{0,1},5])
-ParallelTable[Chop@Max@Table[CheckMassRand@m,{i,1,100}],{m,rawMass}] (* probabilistically check if the mass balances; it should equal zero *)
+CheckMassListRand[massList_]:=ParallelTable[Chop@Max@Abs@Table[CheckMassRand@m,{i,1,100}],{m,massList}] (* probabilistically check if the mass balances; it should equal zero *)
+CheckMassListRand[rawMass]
 
 
-(* ::Subsubsection::Closed:: *)
+hybridMass = {
+	 (* 167: replace 9+42 (in crit region) *)
+	{0,1,0,1,x3,x3,Min[1,(-b-gamma13+gamma33)/(-1+gamma32+gamma33)],Min[1,Max[0,(-1+b+gamma13+gamma32)/gamma32]],1}/.{x3->Max[0,(-1+b+gamma13)/(gamma12+gamma13)]}
+	(* 168: ? replace 49+5+71*)
+	,{0,0,1,1,1,Min[1,b/gamma13],x2,x2,x2}/.x2->Max[0,b-gamma13]
+	(*169*),{1,1,1,0,0,0,b,b,b}
+	(*170*),{1,1,1,0,x1,x1,x2,x2,x2}/.{x1->Min[1,b/(gamma12+gamma13)],x2->Max[0,b-gamma12-gamma13]}
+(*,{0,Max[0,(-1+b-gamma13+gamma32+gamma33)/gamma12],1,1,1-gamma32/gamma12,Min[1,b/gamma13],Min[1,Max[0,(-b+gamma13)/(-1+gamma32+gamma33)]],1,0}*) (* CHEAT, doesnt seem to help *)
+};
+CheckMassListRand[hybridMass] (* probabilistically check if the mass balances; it should equal zero *)
+
+
+(* ::Subsubsection:: *)
 (*Variables and Constraints:*)
 
 
-algs=Append[cost@@#&/@rawMass,costLiSven];
-mass=Append[rawMass,massLiSven];
+rawMass2=Join[rawMass,hybridMass];
+algs=Append[cost@@#&/@rawMass2,costLiSven];
+mass=Append[rawMass2,massLiSven];
 Length@algs
 algsWithMass=Table[{algCost->algs[[i]],algMass->mass[[i]],algIndex->i},{i,1,Length@mass}];
 constrAlg = Z<=#&/@algs;
@@ -343,7 +360,7 @@ FixGamma3s[params_]:=Join[Select[params,Not@MemberQ[{gamma32,gamma33},#[[1]]]&],
 ExtractNonLinX[sol_]:=Select[sol,Not@MemberQ[varD1~Union~varD2,#[[1]]]&]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Best Result (1.305731)*)
 
 
@@ -554,7 +571,7 @@ SolveDualLP[nonLinParams_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=Mod
 ]~Join~nonLinParams
 EvaluateDual[params_,algIset_:;;]:=Join[
 	{{"u[alg]", "Alg Mass",,"Global Index","Local Index"}},
-	Table[{u[i], Style[algMass,PrintPrecision->2], VisualMass[algMass,3,ImageSize->{40,20}],
+	Table[{u[i], Style[algMass,PrintPrecision->2], VisualMass[algMass,3,ImageSize->{60,20}],
 			 algIndex, i}/.algsWithMass[[algIset[[i]]]],{i,1,Length[algIset]}]
 ]/.params
 
@@ -565,35 +582,37 @@ solDual=SolveDualLP[sol,algsI];
 Grid@SortBy[EvaluateDual[%,algsI],#[[2]]&]
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Manipulate*)
 
 
-(* Initialize manipulate *)
-{b0,g10,g20,gamma120,gamma130,gamma320,gamma330}={b,g1,g2,gamma12,gamma13,.01,.01}/.sol;
+{b0,g10,g20,gamma120,gamma130,gamma320,gamma330}={b,g1,g2,gamma12,gamma13,Min[1,gamma12],Min[1,gamma13]}/.sol; (* Initialize manipulate *)
 
 
 BigFractionStyle = Style[#, DefaultOptions -> {FractionBoxOptions -> {AllowScriptLevelChange -> False}}] &;
-algsI=algsI30~Complement~{9,42}~Union~{167}(*~Union~{12,117,32,160,125,100,26,92,43,56,85,114,112};*)
-(*algsI=Range[Length@algs]~Complement~{105,9,42}~Complement~{(*32,64,89,124,134,*)52,51,146};Length@algs;*)
-algsI=Range[Length@algs]
-constrExtra={};
-Manipulate[
+(*algsI=Range[Length@algs];*)
+algsI=algsI30;
+algsI=algsI~Complement~{105,9,42}~Union~{167}
+algsI=algsI~Complement~{49,24,5,71,56,145,10,109}~Union~{168};
+algsI=algsI~Complement~{76,55,57,116,13,77,154,41,35,123,50,152,108}~Union~{169,170};
+Length[algsI]
+Manipulate[Module[{msolDual,msolOptBaseline,mCombo,params},
 	{tb,tg1,tg2,tgamma12,tgamma13,tgamma32,tgamma33}={pb,pg1,pg2,pgamma12,pgamma13,pgamma32,pgamma33}; (* allow saving of modifications *)
-    msolDual = SolveDualLP[{b->pb,gamma12->pgamma12,gamma13->pgamma13,gamma32->pgamma32,gamma33->pgamma33,g1->pg1,g2->pg2},algsI
-		,{u[i1]<=1-eps1,u[i2]<=1-eps1}];
-	iCombo={79,52,146,51,64,89,124,134,32};
+	params = {b->pb,gamma12->pgamma12,gamma13->pgamma13,gamma32->pgamma32,gamma33->pgamma33,g1->pg1,g2->pg2};
+    msolDual = SolveDualLP[params,algsI,{u[i1]<=1-eps1,u[i2]<=1-eps1}];
+	msolOptBaseline = alpha/.SolveDualLP[params,algsI30];
+	iCombo={14,2,10}; (* show dual linear combination of certain algos *)
 	mCombo=Total[u[#]*mass[[algsI[[#]]]]&/@iCombo]/Max[.0001,Total[u[#]&/@iCombo]] /.msolDual;
-    BigFractionStyle@Column@{ToString[1.3057309347870354`]<>" (Goal)",alpha, {"i1/i2 combo", mCombo}, Grid@SortBy[EvaluateDual[msolDual,algsI],#[[2]]&]}/.msolDual
-   ,{{pb,b0},0,1,.001},{{pg1,g10},.01,1,.001},{{pg2,g20},.01,1,.001},{{pgamma12,gamma120},.01,1.5,.001}
+    BigFractionStyle@Column@{{msolOptBaseline,"(Baseline)"},alpha, {"i1/i2 combo", mCombo}, Grid@SortBy[EvaluateDual[msolDual,algsI],#[[2]]&]}/.msolDual
+   ],{{pb,b0},0,1,.001},{{pg1,g10},.01,1,.001},{{pg2,g20},.01,1,.001},{{pgamma12,gamma120},.01,1.5,.001}
    ,{{pgamma13,gamma130},.01,1,.001},{{pgamma32,gamma320},.01,1,.001},{{pgamma33,gamma330},.01,1,.001}
-   ,{eps1,0,.999,.01},{i1,1,Length@algsI,1},{i2,2,Length@algsI,1}]
+   ,{eps1,0,1,.01},{i1,1,Length@algsI,1},{i2,2,Length@algsI,1}]
 
 
 Grid@SortBy[EvaluateDual[msolDual,algsI],-First@#&];
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Algo Minimization*)
 
 
@@ -614,11 +633,9 @@ optDual=alpha/.SolveDualLP[tsol,uniqueI];
 criticalI=#[[1]]&/@Select[costWithAlgIRemoved,#[[2]]>optDual+.00000001&]
 
 
-solDual=SolveDualLP[tsol,uniqueI];
-Grid@SortBy[EvaluateDual[solDual,uniqueI],#[[2]]&]
-
-
-1.3057309347870343`
+tsol=SolveDualLP[tsol,uniqueI];
+alpha/.solDual
+Grid@SortBy[EvaluateDual[tsol,uniqueI],#[[2]]&]
 
 
 (* ::Subsection::Closed:: *)
