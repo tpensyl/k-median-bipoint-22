@@ -371,8 +371,8 @@ ExtractNonLinX[sol_]:=Select[sol,Not@MemberQ[varD1~Union~varD2,#[[1]]]&]
 
 algsI30={-1,5,9,13,20,24,27,35,41,42,44,49,50,52,55,71,76,79,85,90,108,118,123,124,127,140,146,152,155,161};
 algsI29={-1,5,13,20,24,27,35,41,44,49,50,52,55,71,76,79,85,90,108,118,123,124,127,140,146,152,155,161,167};
-algsI10={-1,168,169,170,171,172,173,174,175};
-algsI=algsI10
+algsI9={-1,168,169,170,171,172,173,174,175};
+algsI=algsI9
 Length@algsI
 solBest={b->0.6715331873666895`,d111->0.046860368382269514`,d112->0.02456331335018877`,d113->0.044074854304643814`,d1131->0.07144707077351625`,d1132->0.02986653206436148`,d1133->0.061099227368884346`,d121->0.04695211510711601`,d122->0.0752748957991086`,d123->0.13931896491196272`,d1231->0.05883468012890778`,d1232->0.024422132431967978`,d1233->0.050364903626525424`,d131->0.07457214633931589`,d132->0.061522492525401866`,d133->0.11153079587680949`,d1331->0.3156463103941929`,d1332->0.12667137180358412`,d1333->0.26456720159876934`,d211->1.3055804129059156`*^-10,d212->0.013885414272666036`,d213->0.02619922345614402`,d221->1.3055806300140836`*^-10,d222->0.024068020757453987`,d223->0.042253564881508485`,d231->1.3055745614447794`*^-10,d232->0.021952084030530877`,d233->0.0410386302990541`,d311->0.05434950802505862`,d312->0.021182405258084562`,d313->0.044979431676897816`,d321->0.04555546206374887`,d322->0.017939953371794066`,d323->0.037662673383040815`,d331->0.13291684395399628`,d332->0.055358001630245506`,d333->0.11368619189433839`,g1->0.642`,g2->0.833`,gamma12->0.21167853121269323`,gamma13->0.38689227778230223`,gamma32->0.18043327359652983`,gamma33->0.3749367318689848`,Z->1.3057309344455876`,g1->0.642`,g2->0.833`};
 {g1hat,g2hat}={g1,g2}/.solBest
@@ -595,14 +595,14 @@ Grid@SortBy[EvaluateDual[solDual,algsI],#[[2]]&]
 BigFractionStyle = Style[#, DefaultOptions -> {FractionBoxOptions -> {AllowScriptLevelChange -> False}}] &;
 (*algsI=Range[Length@algs];*)
 algsI=algsI30;
-algsI=algsI~Complement~{105,9,42}~Union~{167}
+algsI=algsI~Complement~{105,9,42}~Union~{167};
 algsI=algsI~Complement~{49,24,5,71,56,145,10,109}~Union~{168};
 algsI=algsI~Complement~{76,55,57,116,13,77,154,41,35,123,50,152,108,157,4,53,138,125,165,14,95,91,135,160,12,36,87,37,75}~Union~{169,170};
 algsI=algsI~Complement~{90,20,44,127,140,27,155,85,164,63,92,142,101,73,144,68,114,46,83,23,103,94,139,80,130,43,86,26,60}~Union~{171,172};
 algsI=algsI~Complement~{161,118,79,52,124,146,38,100,59}~Union~{173,174};
 algsI=algsI~Complement~{167}~Union~{175};
-algsI={-1,168,169,170,171,172,173,174,175}
-algsI=Join[algsI10,algsI30]
+algsI9
+algsI=algsI9~Join~{146,9,71,124,85}~Complement~{175}
 Length[algsI]
 {b0,g10,g20,gamma120,gamma130,gamma320,gamma330}={b,g1,g2,gamma12,gamma13,gamma32,gamma33}/.sol
 Manipulate[Module[{msolDual,msolOptBaseline,mCombo},
@@ -623,18 +623,35 @@ save1=mparams1
 {save1,save2,save3,save4}={b->#[[1]],g1->#[[2]],g2->#[[3]],gamma12->#[[4]],gamma13->#[[5]],gamma32->#[[6]],gamma33->#[[7]]}&/@{{0.6715331873666895`,0.642`,0.833`,0.526`,0.323`,0.21167853121269323`,0.38689227778230223`},{0.601`,0.642`,0.833`,0.21167853121269323`,0.38689227778230223`,0.21167853121269323`,0.38689227778230223`},{0.670401615890807`,0.642`,0.833`,0.13850059367175058`,0.3275635475924704`,0.010000210741811375`,0.24844458802882918`},{0.668327090916148`,0.642`,0.833`,0.2793271784224084`,0.2391828008877306`,0.14020302569038923`,0.23918280088767704`}};
 
 
-(* identify algorithms which can be removed at this point*)
-forceUseEachI=Sort@Table[{alpha/.SolveDualLP[solBest,algsI,{u[i]>=.0001}],i},{i,1,Length@algsI}
+(* identify algorithms which are definitely not needed at this point*)
+talgsI=algsI
+target=Z/.SolveLPatSol[save4,talgsI]
+forceUseEachI=Sort[Table[{alpha/.SolveDualLP[save4,talgsI,{u[i]>=.0001}],talgsI[[i]]},{i,1,Length@talgsI}]~Select~(#[[1]]>target+.000001&)]
 
 
-(* identify algorithms which can help at this point *)
-tryAddI=Sort@Table[{alpha/.SolveDualLP[save4,algsI10~Append~algI],algI},{algI,algsI30}]
+(* identify algorithms which can't be removed at this point *)
+talgsI=algsI
+target=Z/.SolveLPatSol[save4,talgsI]
+nonRemovableI=Last/@(Table[{alpha/.SolveDualLP[save4,talgsI~Complement~{algI}],algI},{algI,talgsI}]~Select~(#[[1]]>target+.000001&))
+removableI=talgsI~Complement~nonRemovableI
+
+
+(* identify single new algorithms which can help at this point - though it's possible multiple algorithms may be needed in conjunction for benefit *)
+talgsI=algsI
+beatThis = Z/.SolveLPatSol[save4,talgsI]
+tryAddRes=Sort[Table[{alpha/.SolveDualLP[save4,talgsI~Append~algI],algI},{algI,Complement[algsI30,talgsI]}]~Select~(#[[1]]<beatThis-.000001&)]
+tryAddI=Last/@tryAddRes
+
+
+VisualMass[mass[[#]]/.save4,3,ImageSize->{100,100}]&/@algsI9
+VisualMass[mass[[#]]/.save4,3,ImageSize->{100,100}]&/@{9,71,124,85}
+algsI9
+(* note: algs10 changes value with change in gamma33. algs30 doesnt *)
+(* TODO try adding F1A complements of existing algos? *)
+(* TODO try adding counter shift to 168*)
 
 
 SolveNLP[g1/.solBest,g2/.solBest,100,algsI]
-
-
-Grid@SortBy[EvaluateDual[msolDual,algsI],-First@#&];
 
 
 (* ::Subsubsection::Closed:: *)
