@@ -12,6 +12,7 @@ SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->8]
 SetOptions[Plot3D, AxesLabel->Automatic,
 	PlotStyle->Opacity[.7], ClippingStyle->None,
 	BoundaryStyle -> Directive[Black, Thick]];
+Import@FileNameJoin[{ParentDirectory[NotebookDirectory[]],"util","visualizeMass.m"}]
 
 
 (* ::Subsection::Closed:: *)
@@ -141,7 +142,7 @@ allMass=Join[massSafe,massbgamma0,massbgamma1,massOnlyC,massCombos];
 algs=Append[cost@@#&/@allMass,costLiSven];
 AppendTo[allMass,massLiSven];
 Length@algs
-algsWithMass=Table[{algCost->algs[[i]],algMass->Style[allMass[[i]],PrintPrecision->2],algIndex->i},{i,1,Length[allMass]}];
+algsWithMass=Table[{algCost->algs[[i]],algMass->allMass[[i]],algIndex->i},{i,1,Length[allMass]}];
 constrAlg = Z<=#&/@algs;
 
 varNonLin={b,g,gammaB,gammaC};
@@ -153,7 +154,7 @@ constrBasic = Join[{Z>=0,0<=b<=1,0<=gammaB,0<=gammaC<=1,gammaC<=gammaB},#>=0&/@U
         ,{Total[varD1]*(1-b)+Total[varD2]*b==1}];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Utility Methods*)
 
 
@@ -241,8 +242,9 @@ SolveDualLP[nonLinParams_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=Mod
 	dualSol
 ]~Join~nonLinParams
 EvaluateDual[params_,algIset_:;;]:=Join[
-	{{"u[alg]", "Alg Mass","Alg Index"}},
-	Table[{u[i], Style[algMass,PrintPrecision->2], algIndex}/.algsWithMass[[algIset[[i]]]],{i,1,Length[algIset]}]
+	{{"u[alg]", "Alg Mass",,"Global Index","Local Index"}},
+	Table[{u[i], Style[algMass,PrintPrecision->2], VisualMass[algMass,2,ImageSize->{60,20}],
+			 algIndex, i}/.algsWithMass[[algIset[[i]]]],{i,1,Length[algIset]}]
 ]/.params
 
 
@@ -256,27 +258,26 @@ Grid@EvaluateDual[%,algsI]
 (*Explore Dual*)
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Manipulate*)
-
-
-(* Initialize manipulate *)
-{b0,g0,gammaB0,gammaC0}={b,g,gammaB,gammaC}/.sol;
 
 
 BigFractionStyle = Style[#, DefaultOptions -> {FractionBoxOptions -> {AllowScriptLevelChange -> False}}] &;
 algsI=algsI3
 constrExtra={};
-Manipulate[
-    {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
-    msolDual = SolveDualLP[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg},algsI(*,{u[i1]>=eps1}*)];
-	mCombo=Total[u[#]*allMass[[algsI[[#]]]]&/@{i1,i2}]/Total[u[#]&/@{i1,i2}] /.msolDual;
-    BigFractionStyle@Column@{alpha, Grid@EvaluateDual[msolDual,algsI],{"i1/i2 combo", mCombo}}/.msolDual
-   ,{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.01,1.5,.001},{{pgammaC,gammaC0},.01,1,.001},{{pg,g0},.01,1,.001}
-   ,{eps1,0,1,.01},{i1,1,Length@algsI,1},{i2,2,Length@algsI,1}]
+{b0,g0,gammaB0,gammaC0}={b,g,gammaB,gammaC}/.sol;
+Manipulate[Module[{msolDual,msolOptBaseline,mCombo},
+	mparamsg1 = {b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg};
+    msolDual = SolveDualLP[mparamsg1,algsI,Join[u[#]==0&/@{},(u[#]>=eps1&)/@forceI]];
+	msolOptBaseline = alpha/.SolveDualLP[mparamsg1,Range@Length@algs];
+	mCombo=Total[u[#]*allMass[[algsI[[#]]]]&/@comboI]/Max[.0001,Total[u[#]&/@comboI]];
+    BigFractionStyle@Column@{Row@{msolOptBaseline,"(Baseline)"},alpha, {algsI[[comboI]],mCombo},VisualMass[mCombo,2,ImageSize->{200,100}]
+		, Grid@Select[SortBy[EvaluateDual[msolDual,algsI],#[[2]]&],Chop[#[[1]]]!=0&]}/.msolDual
+   ],{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.01,1.5,.001},{{pgammaC,gammaC0},.01,1,.001},{{pg,g0},.01,1,.001}
+   ,{eps1,0,1,.01},{{removeI,{}}},{{comboI,{1,2,3,4}}},{{forceI,{}}}]
 
 
-{b0,gammaB0,gammaC0}={tb,tgammaB,tgammaC} (* optionally persist modifications *)
+save1=mparamsg1 (* optionally save modifications *)
 
 
 (* ::Subsubsection::Closed:: *)
@@ -871,7 +872,7 @@ Plot[{u[4],u[5]}/(u[4]+u[5])/.SolveDualLP[{b->(b/.sol),gammaB->pgammaB,gammaC->.
 (**)
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Exact form*)
 
 
@@ -898,7 +899,7 @@ ListPlot[tpoints]
 SortBy[tpoints,Last][[1,1]]*)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Analyze Maximum*)
 
 
