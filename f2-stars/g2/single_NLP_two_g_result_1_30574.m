@@ -415,7 +415,13 @@ Z/.%
 
 
 outputFile=FileNameJoin[{NotebookDirectory[],"data","g2_algs.m"}]
-Put[{massSubsets->{algs13->algsI13,algs30->algsI30}},massAll->mass,outputFile]
+outputObj={massSubsets->{algs13->algsI13,algs30->algsI30},massAll->mass};
+Put[outputObj,outputFile]
+
+
+outputFile=FileNameJoin[{NotebookDirectory[],"data","g2_algs.json"}];
+outputObj={"massSubsets"->{"algs13"->algsI13,"algs30"->algsI30},"massAll"->Map[ToString@InputForm@#&,mass,{2}]};
+Export[outputFile,outputObj,"JSON"]
 
 
 (* ::Subsection::Closed:: *)
@@ -590,7 +596,7 @@ fullPlot=Plot3D[{Z/.SolveLPatSol[{g1->(g1/.sol),g2->(g2/.sol),b->(b/.sol),gamma1
 (Z/.SolveLPatSol[{g1->(g1/.sol),g2->(g2/.sol),b->(b/.sol),gamma12->.25,gamma13->.75,gamma32->.001,gamma33->.001},#])&/@{algsI10,algsI29,All}
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Dual*)
 
 
@@ -625,7 +631,7 @@ solDual=SolveDualLP[sol,algsI];alpha/.solDual
 Grid@SortBy[EvaluateDual[solDual,algsI],#[[2]]&]
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Manipulate*)
 
 
