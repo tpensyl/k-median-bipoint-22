@@ -282,7 +282,12 @@ Manipulate[Module[{msolDual,msolOptBaseline,mCombo},
 save2=mparamsg1 (* optionally save modifications *)
 
 
-save1=mparamsg1 (* optionally save modifications *)
+tsol=save2;
+{{-1},{30,33,34},{31,32,35},{29,37,36}}  (* 3rd column is algsI3, the resp. combos of first two *)
+Grid[VisualMass2[allMass[[#]]/.tsol,ImageSize->{100,100}]&/@#&/@%]
+{{0.5915267785771386`,0.40847322142286135`,0.6642685851318949`,0.33573141486810515`,0.6666666666666666`,0.6666666666666666`}
+,{0.44508027340645356`,0.5549197265935465`,0.8831664282308058`,0.9221109521538706`,0.26402797647432846`,0.26402797647432846`}};
+VisualMass2[#/.tsol,ImageSize->{100,100}]&/@%
 
 
 (* ::Subsubsection::Closed:: *)
