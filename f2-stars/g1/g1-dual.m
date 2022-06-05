@@ -12,6 +12,8 @@ SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->8]
 SetOptions[Plot3D, AxesLabel->Automatic,
 	PlotStyle->Opacity[.7], ClippingStyle->None,
 	BoundaryStyle -> Directive[Black, Thick]];
+Import@FileNameJoin[{ParentDirectory[NotebookDirectory[]],"util","visualizeMass.m"}]
+VisualMass2[p_List,opts___]:=VisualMass[p[[{1,3,2,4,5,6}]],2,opts]
 
 
 (* ::Subsection::Closed:: *)
@@ -42,7 +44,7 @@ SetOptions[Plot3D, AxesLabel->Automatic,
 (*	Also, 0 <= \[Gamma]_C <= 1*)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Setting up the NLP:*)
 
 
@@ -141,7 +143,7 @@ allMass=Join[massSafe,massbgamma0,massbgamma1,massOnlyC,massCombos];
 algs=Append[cost@@#&/@allMass,costLiSven];
 AppendTo[allMass,massLiSven];
 Length@algs
-algsWithMass=Table[{algCost->algs[[i]],algMass->Style[allMass[[i]],PrintPrecision->2],algIndex->i},{i,1,Length[allMass]}];
+algsWithMass=Table[{algCost->algs[[i]],algMass->allMass[[i]],algIndex->i},{i,1,Length[allMass]}];
 constrAlg = Z<=#&/@algs;
 
 varNonLin={b,g,gammaB,gammaC};
@@ -159,7 +161,7 @@ constrBasic = Join[{Z>=0,0<=b<=1,0<=gammaB,0<=gammaC<=1,gammaC<=gammaB},#>=0&/@U
 
 (* Show tight algorithms *)
 EvaluateAlgs[params_,algIset_:;;]:=(
-		{algCost, Style[algMass,PrintPrecision->2], algIndex}/.#&/@algsWithMass[[algIset]]
+		{algCost, Style[algMass,PrintPrecision->2], VisualMass2[algMass,ImageSize->{100,60}], algIndex}/.#&/@algsWithMass[[algIset]]
 	)/.params
 EvaluateAlgsByCost[params_,algIset_:;;]:=Grid[SortBy[EvaluateAlgs[params,algIset],First]~Prepend~{"Alg Cost ", "Alg Mass","Alg Index"},Alignment->Left]
 EvaluateAlgsByMass[params_,algIset_:;;]:=Grid[SortBy[EvaluateAlgs[params,algIset],#[[2]]&]~Prepend~{"Alg Cost ", "Alg Mass","Alg Index"},Alignment->Left]
@@ -200,11 +202,11 @@ algsI5={-1,4,8,23,34,35};
 algsI3={-1,34,35,36};
 algsI6sym={-1,29,30,31,32,33,37}; (* 36 is cost-equivalent to a convex combination of 2 valid algos *)
 algsI=algsI6sym
-ghat=0.6586
-solNLP=SolveNLP[ghat,300,algsI]
+ghat=0.6586066
+solNLP=SolveNLP[ghat,300,algsI] (* for much higher speed and accuracy, use exactSolutionForm from later on *)
 
 
-sol=SolveLPatSol[solNLP,algsI10(*, constrD1D2~Union~constrD1D2g*)];
+sol=SolveLPatSol[solNLP,algsI6sym(*, constrD1D2~Union~constrD1D2g*)];
 Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
@@ -213,16 +215,16 @@ Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
 (* ::Text:: *)
-(*By setting g=.6586, we get approximation factor 1.31019*)
+(*By setting g=0.6586066, we get approximation factor 1.310188885063*)
 (**)
-(*This file gives several possible algo sets to achieve this. *)
+(*This file gives several possible algo sets to achieve this. Also a closed form solution for the critical region. *)
 (**)
-(*Some of the later algorithms are not directly feasible, but are cost equivalent to convex combination of valid algos. (e.g. as long as p2b+p2c>=1*)
+(*Some of the later algorithms are not directly feasible, but are cost equivalent to convex combination of valid algos. (e.g. as long as p2b+p2c>=1)*)
 (**)
 (*This NLP could be simplified by padding such that |F2C|=min{|F2B|,|Y|}, to fix gammaC:=Min[1,gammaB]. Or using something like alg6sym, the need for variable gammaC vanishes entirely.*)
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Dual*)
 
 
@@ -241,8 +243,9 @@ SolveDualLP[nonLinParams_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=Mod
 	dualSol
 ]~Join~nonLinParams
 EvaluateDual[params_,algIset_:;;]:=Join[
-	{{"u[alg]", "Alg Mass","Alg Index"}},
-	Table[{u[i], Style[algMass,PrintPrecision->2], algIndex}/.algsWithMass[[algIset[[i]]]],{i,1,Length[algIset]}]
+	{{"u[alg]", "Alg Mass",,"Global Index","Local Index"}},
+	Table[{u[i], Style[algMass,PrintPrecision->2], VisualMass2[algMass,ImageSize->{150,100},ImageSize->{75,50}],
+			 algIndex, i}/.algsWithMass[[algIset[[i]]]],{i,1,Length[algIset]}]
 ]/.params
 
 
@@ -256,27 +259,35 @@ Grid@EvaluateDual[%,algsI]
 (*Explore Dual*)
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Manipulate*)
 
 
-(* Initialize manipulate *)
-{b0,g0,gammaB0,gammaC0}={b,g,gammaB,gammaC}/.sol;
-
-
 BigFractionStyle = Style[#, DefaultOptions -> {FractionBoxOptions -> {AllowScriptLevelChange -> False}}] &;
+algsI=algsI6sym
 algsI=algsI3
 constrExtra={};
-Manipulate[
-    {tb,tgammaB,tgammaC}={pb,pgammaB,pgammaC}; (* allow saving of modifications *)
-    msolDual = SolveDualLP[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg},algsI(*,{u[i1]>=eps1}*)];
-	mCombo=Total[u[#]*allMass[[algsI[[#]]]]&/@{i1,i2}]/Total[u[#]&/@{i1,i2}] /.msolDual;
-    BigFractionStyle@Column@{alpha, Grid@EvaluateDual[msolDual,algsI],{"i1/i2 combo", mCombo}}/.msolDual
-   ,{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.01,1.5,.001},{{pgammaC,gammaC0},.01,1,.001},{{pg,g0},.01,1,.001}
-   ,{eps1,0,1,.01},{i1,1,Length@algsI,1},{i2,2,Length@algsI,1}]
+{b0,g0,gammaB0,gammaC0}={b,g,gammaB,gammaC}/.sol;
+Manipulate[Module[{msolDual,msolOptBaseline,mCombo},
+	mparamsg1 = {b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg};
+    msolDual = SolveDualLP[mparamsg1,algsI,Join[u[#]==0&/@removeI,(u[#]>=eps1&)/@forceI]];
+	msolOptBaseline = alpha/.SolveDualLP[mparamsg1,Range@Length@algs];
+	mCombo=Total[u[#]*allMass[[algsI[[#]]]]&/@comboI]/Max[.0001,Total[u[#]&/@comboI]];
+    BigFractionStyle@Column@{Row@{msolOptBaseline,"(Baseline)"},alpha, {algsI[[comboI]],mCombo},VisualMass2[mCombo,ImageSize->{80,80}]
+		, Grid@Select[SortBy[EvaluateDual[msolDual,algsI],#[[2]]&],Chop[#[[1]]]!=0&]}/.msolDual
+   ],{{pb,b0},0,1,1/100.},{{pgammaB,gammaB0},1/100,3/2,1/100.},{{pgammaC,gammaC0},1/100,1,1/100},{{pg,g0},1/100,1,1/100.}
+   ,{{eps1,.01},0,1,1/100},{{removeI,{}}},{{comboI,Range@Length@algsI}},{{forceI,{}}}]
 
 
-{b0,gammaB0,gammaC0}={tb,tgammaB,tgammaC} (* optionally persist modifications *)
+save2=mparamsg1 (* optionally save modifications *)
+
+
+tsol=save2;
+{{-1},{30,33,34},{31,32,35},{29,37,36}}  (* 3rd column is algsI3, the resp. combos of first two *)
+Grid[VisualMass2[allMass[[#]]/.tsol,ImageSize->{100,100}]&/@#&/@%]
+{{0.5915267785771386`,0.40847322142286135`,0.6642685851318949`,0.33573141486810515`,0.6666666666666666`,0.6666666666666666`}
+,{0.44508027340645356`,0.5549197265935465`,0.8831664282308058`,0.9221109521538706`,0.26402797647432846`,0.26402797647432846`}};
+VisualMass2[#/.tsol,ImageSize->{100,100}]&/@%
 
 
 (* ::Subsubsection::Closed:: *)
@@ -335,7 +346,6 @@ MergeAlgos[algsI_List, algsII_List, form_]:=Module[{data,fits,forms},
 	Column@ExpandDenominator@ExpandNumerator@Simplify@forms
 ]
 algsItemp=algsI3;
-form=(a1+a2*x+a3*x^2+a4*x^3)/(1+b1*x+b2*x^2+b3*x^3)/.{x->b};
 form=Sum[v[1,i]*x^i,{i,0,3}]/
      Sum[v[2,i]*x^i,{i,0,3}]/. {v[2,0]->1, x->g}
 MergeAlgos[algsItemp,{1,2,3,4},form]
@@ -363,7 +373,7 @@ form=Sum[v[1,i,j]*x^i*y^j,{i,0,2},{j,0,2}]/
 {time,result}=Timing@MergeAlgos[algsItemp,{1,2,3,4},form]/.gammaB->\[Gamma]
 
 
-(* Detect all 3 vars? *)
+(* Detect all 3 vars. *)
 Clear[MergeAlgos]
 MergeAlgos[algsI_List, algsII_List, form_]:=Module[{data,fits,forms},
 	data=Transpose@Flatten[Table[
@@ -387,8 +397,8 @@ time
 result
 
 
-(* ::Subsubsection:: *)
-(*Dual feasibility*)
+(* ::Subsubsection::Closed:: *)
+(*Exact Dual feasibility*)
 
 
 (* Can we use this closed form as a dual feasible solution? *)
@@ -747,6 +757,11 @@ feasZoneReq2=%[[1]];
 RegionPlot3D[And[feasZoneReq1,feasZoneReq2],{b,0,1},{gammaB,0,2},{g,0,1},AxesLabel->Automatic]
 
 
+(* infeasibility zone worst cost is 1.274 , so seems safely away from the critical area.*)
+sol1=SolveNLP[ghat,300,algsI,{(1-g) gammaB>=b}]
+sol2=SolveNLP[ghat,300,algsI,{gammaB<=g (1+2 b^2+gammaB+(-2+g) gammaB^2-b (3+gammaB))}]
+
+
 (* ::Subsubsection::Closed:: *)
 (*Explore DUAL - combining the F1=0 cases*)
 
@@ -867,22 +882,91 @@ Plot[{u[4],u[5]}/(u[4]+u[5])/.SolveDualLP[{b->(b/.sol),gammaB->pgammaB,gammaC->.
 (**)
 
 
+(* ::Section::Closed:: *)
+(*Exact form*)
+
+
 (* ::Subsection:: *)
 (*Result*)
 
 
+(* Exact form (for some critical region - see Exact Dual feasibility) found in Dual -> Automate Rational Form-Finding. Hard-coded here. *)
 exactSolutionForm=(-2+4 b-2 b^2-g+b g-3 \[Gamma]+2 b \[Gamma]-5 g \[Gamma]+9 b g \[Gamma]-4 b^2 g \[Gamma]-6 g \[Gamma]^2+4 b g \[Gamma]^2+g^2 \[Gamma]^2)/(-2+4 b-2 b^2-g+3 b g-4 b^2 g+2 b^3 g-3 \[Gamma]+4 b \[Gamma]-2 b^2 \[Gamma]-5 g \[Gamma]+11 b g \[Gamma]-8 b^2 g \[Gamma]+2 b^3 g \[Gamma]-6 g \[Gamma]^2+8 b g \[Gamma]^2-4 b^2 g \[Gamma]^2+g^2 \[Gamma]^2-2 b g^2 \[Gamma]^2+2 b^2 g^2 \[Gamma]^2)
 exactSolutionForm=exactSolutionForm/.\[Gamma]->gammaB;
+Clear[SolveX]
+SolveX[g1hat_,iter_:100]:=
+	NMaximize[{Z, Z<=exactSolutionForm, 0<b<1, 0<gammaB, g==g1hat},{b,gammaB,g,Z}, MaxIterations->iter][[2]]
+solX=SolveX[0.6586066,300]
 
 
-(* ::Text:: *)
-(*Exact form found by guessing the form, and fitting exact rational-valued tuples (b,gamma,g) and their solutions. (This approach could perhaps be just as easily be be applied to the LP instead of the dual.)*)
-(**)
-(*Or at least, this is the exact form in the critical region.*)
+(* ::Subsection::Closed:: *)
+(*High Precision g*)
 
 
-(* ::Section:: *)
-(*Exact form*)
+(*SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->22]
+tpoints=Table[{g, NMaximize[{exactSolutionForm,0<b<1,0<gammaB},{b,gammaB},PrecisionGoal->15,AccuracyGoal->15,MaxIterations->10000][[1]]},{g,.65860655,.65860665,.00000001}]
+ListPlot[tpoints]
+SortBy[tpoints,Last][[1,1]]*)
+
+
+(* ::Subsection::Closed:: *)
+(*Analyze Maximum*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*Maximize in gammaB*)
+
+
+(* maximum should occur when either the derivative is zero, or at a boundary point *)
+gammaBXVertex = Solve[D[exactSolutionForm,gammaB]==0,gammaB]//FullSimplify
+gammaBXCrit = Join[gammaBXVertex,{{gammaB->0},{gammaB->Infinity}}]~Simplify~{0<b<1,0<g<=1};
+(* restrict to real and non negative critical values of gammaB *)
+gammaBXValid = Piecewise[{{Limit[exactSolutionForm,#[[1]]],Im[gammaB]==0&&gammaB>=0}/.#},-Infinity]&/@gammaBXCrit;
+(*gammaBXMax = Max@@FullSimplify[gammaBXValid,{0<b<1,0<g}]*) (* It erroneously simplifies away the "Real" check *)
+Plot3D[Max@@gammaBXValid,{b,0.001,1},{g,0.001,1}]
+
+
+solX = SolveX[ghat,1000]
+gammaB/.gammaBXCrit/.solX (* looks like opts occurs at 2nd critical point *)
+(*Plot3D[gammaBXValid,{b,0.6,.75},{g,0.4,.9},PlotStyle->{Read,Green,Blue,Purple},PlotRange->{1.29,1.32}]*) (* confirm *)
+optXbg = FullSimplify[exactSolutionForm/.gammaBXCrit[[2]],{0<b<1,0<g<=1}]
+optXbgRegion = Simplify[(Im[gammaB]==0&&gammaB>=0)/.gammaBXCrit[[2]],{0<b<1,0<g<=1}]
+Plot3D[{optXbg,Z/.solX},{b,0.55,.75},{g,0.3,.9},RegionFunction->Function[{b,g,Z},optXbgRegion]]
+gammaB/.gammaBXCrit[[2]]/.solX (* note we are well away from zero - opt doesn't lie on boundary *)
+D[optXbg,{g,2}]; (* too complex to try to solve closed form for g *)
+(* the function is like a mountain pass: there's a single choke point, so setting g there is enough (vs as f(b)) *)
+
+
+(* ::Subsubsection::Closed:: *)
+(*Maximize in g*)
+
+
+(* Suppose we fix gamma and let the adversary set g. Complicating factor: adversary may also set gamma_max. Ignore for now *)
+gXVertex = Solve[D[exactSolutionForm,g]==0,g]~FullSimplify~{gammaB>0,0<b<1};
+(*gXDeterminant = Cases[g/.gXVertex, Power[_, 1/2], Infinity][[-1]]*)
+gXCrit = Join[gXVertex,{{g->0},{g->1}}]~Simplify~{0<b<1,0<gammaB}
+gXValid = Piecewise[{{Limit[exactSolutionForm,#[[1]]],Im[g]==0&&g>=0}/.#},-Infinity]&/@gXCrit;
+(*Plot3D[gXValid,{b,0.001,1},{gammaB,0.001,1.5},PlotStyle->{Red,Blue,Green,Purple}]*) (* Second critical point achieves max *)
+Plot3D[{gXValid[[2]],Z/.solX},{b,0.65,.69},{gammaB,0.45,.6}] (* Another saddle point. *)
+
+
+(* ::Subsubsection::Closed:: *)
+(*Maximize in b*)
+
+
+bXVertex = Solve[D[exactSolutionForm,b]==0,b]; (* 3 cubic solutions *)
+bXCrit = Join[bXVertex,{{b->0},{b->1}}];
+(*bXValid = Piecewise[{{exactSolutionForm,Im[b]==0&&b>=0}/.#},-Infinity]&/@bXCrit;*) (*M hangs trying to plot this*)
+(*bplotX=Plot3D[exactSolutionForm/.bXCrit[[#]],{g,0.001,1},{gammaB,0.001,1.2}
+	,PlotStyle->{Red,Blue,Green,Purple,Cyan}[[#]]]&/@Range[5]*) (*Takes awhile but works. first sol is usually max *)
+bplotN=Plot3D[NMaximize[{exactSolutionForm,0<b<1},{b}][[1]],{g,0.001,1},{gammaB,0.001,1.2}] (*easier to just maximize numerically*)
+
+
+Show[bplotN, Plot3D[Z/.solX,{g,0.001,1},{gammaB,0.001,1.2},PlotStyle->{Orange,Opacity[.6]}]]
+
+
+(* ::Subsection::Closed:: *)
+(*Randomization*)
 
 
 (* Can we use exact form to randomize or discretize? Assume for now we can handle the infeasible regions elsewhere *)
@@ -910,16 +994,7 @@ Manipulate[
 ,{{ghat1,.642},0.001,1},{{ghat2,.6586},0.001,1},{{ghat3,.833},0.001,1}]
 
 
-(* ::Subsubsection::Closed:: *)
-(*Infeasibility Zone*)
-
-
-(* infeasibility zone worst cost is 1.274 , so seems safely away from the critical area.*)
-sol1=SolveNLP[ghat,300,algsI,{(1-g) gammaB>=b}]
-sol2=SolveNLP[ghat,300,algsI,{gammaB<=g (1+2 b^2+gammaB+(-2+g) gammaB^2-b (3+gammaB))}]
-
-
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Previous Exploration*)
 
 
@@ -976,7 +1051,7 @@ sol=SolveLPatSol[solNLP,algsI];
 Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Explore Tight Point*)
 
 
@@ -985,12 +1060,16 @@ Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
 (* we can compare closed form solution... it is loose or invalid in some edge cases *)
+algsI={-1,29,30,31,32,33,37}
 Manipulate[Module[{sol2},
 {tb,tgammaB,tgammaC,tg}={pb,pgammaB,pgammaC,pg}; (* allow saving of modifications *)
-sol2 = SolveLPatSol[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg},algsI6sym(*~Union~{6,1,5,27}*),constrD1D2~Union~constrD1D2g];
-Column@{Grid@{{"Closed form",#,N@#}&[exactSolutionForm/.sol2],{"LP sol",#,N@#}&[Z/.sol2]},sol2,EvaluateAlgsByMass[sol2,algsI6sym]}
-],{{pb,b0},0,1,1/1000},{{pgammaB,gammaB0},1/1000,3/2,1/1000},{{pgammaC,gammaC0},1/1000,1,1/1000},{{pg,g0},1/1000,1,1/1000}]
+sol2 = SolveLPatSol[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg},algsI(*~Union~{6,1,5,27}*),constrD1D2~Union~constrD1D2g];
+Column@{Grid@{{"Closed form",#,N@#}&[exactSolutionForm/.sol2],{"LP sol",#,N@#}&[Z/.sol2]},sol2,EvaluateAlgsByMass[sol2,algsI]}
+],{{pb,b0},0,1,1/1000},{{pgammaB,gammaB0},1/1000,3/2,1/1000},{{pgammaC,gammaC0},1/1000,1,1/1000},{{pg,g0},1/1000,1,1/1000}]//N
 
 
 
 {b0,gammaB0,gammaC0,g0}={tb,tgammaB,tgammaC,tg} (* persist modifications *)
+
+
+algsI6sym
