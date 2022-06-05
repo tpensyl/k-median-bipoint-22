@@ -419,7 +419,7 @@ Put[outputObj,outputFile]
 
 
 outputFile=FileNameJoin[{NotebookDirectory[],"data","g2_algs.json"}];
-outputObj={"massSubsets"->{"algs13"->algsI13,"algs30"->algsI30},"massAll"->Map[ToString@InputForm@#&,mass,{2}]};
+outputObj={"massSubsets"->{"algs13"->algsI13,"algs29"->algsI29},"massAll"->Map[ToString@InputForm@#&,mass,{2}]};
 Export[outputFile,outputObj,"JSON"]
 
 
