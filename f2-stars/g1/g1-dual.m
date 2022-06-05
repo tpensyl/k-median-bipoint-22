@@ -13,6 +13,7 @@ SetOptions[Plot3D, AxesLabel->Automatic,
 	PlotStyle->Opacity[.7], ClippingStyle->None,
 	BoundaryStyle -> Directive[Black, Thick]];
 Import@FileNameJoin[{ParentDirectory[NotebookDirectory[]],"util","visualizeMass.m"}]
+VisualMass2[p_List,opts___]:=VisualMass[p[[{1,3,2,4,5,6}]],2,opts]
 
 
 (* ::Subsection::Closed:: *)
@@ -160,7 +161,7 @@ constrBasic = Join[{Z>=0,0<=b<=1,0<=gammaB,0<=gammaC<=1,gammaC<=gammaB},#>=0&/@U
 
 (* Show tight algorithms *)
 EvaluateAlgs[params_,algIset_:;;]:=(
-		{algCost, Style[algMass,PrintPrecision->2], algIndex}/.#&/@algsWithMass[[algIset]]
+		{algCost, Style[algMass,PrintPrecision->2], VisualMass2[algMass,ImageSize->{100,60}], algIndex}/.#&/@algsWithMass[[algIset]]
 	)/.params
 EvaluateAlgsByCost[params_,algIset_:;;]:=Grid[SortBy[EvaluateAlgs[params,algIset],First]~Prepend~{"Alg Cost ", "Alg Mass","Alg Index"},Alignment->Left]
 EvaluateAlgsByMass[params_,algIset_:;;]:=Grid[SortBy[EvaluateAlgs[params,algIset],#[[2]]&]~Prepend~{"Alg Cost ", "Alg Mass","Alg Index"},Alignment->Left]
@@ -243,7 +244,7 @@ SolveDualLP[nonLinParams_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=Mod
 ]~Join~nonLinParams
 EvaluateDual[params_,algIset_:;;]:=Join[
 	{{"u[alg]", "Alg Mass",,"Global Index","Local Index"}},
-	Table[{u[i], Style[algMass,PrintPrecision->2], VisualMass[algMass,2,ImageSize->{60,20}],
+	Table[{u[i], Style[algMass,PrintPrecision->2], VisualMass2[algMass,ImageSize->{150,100},ImageSize->{75,50}],
 			 algIndex, i}/.algsWithMass[[algIset[[i]]]],{i,1,Length[algIset]}]
 ]/.params
 
@@ -263,18 +264,22 @@ Grid@EvaluateDual[%,algsI]
 
 
 BigFractionStyle = Style[#, DefaultOptions -> {FractionBoxOptions -> {AllowScriptLevelChange -> False}}] &;
+algsI=algsI6sym
 algsI=algsI3
 constrExtra={};
 {b0,g0,gammaB0,gammaC0}={b,g,gammaB,gammaC}/.sol;
 Manipulate[Module[{msolDual,msolOptBaseline,mCombo},
 	mparamsg1 = {b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg};
-    msolDual = SolveDualLP[mparamsg1,algsI,Join[u[#]==0&/@{},(u[#]>=eps1&)/@forceI]];
+    msolDual = SolveDualLP[mparamsg1,algsI,Join[u[#]==0&/@removeI,(u[#]>=eps1&)/@forceI]];
 	msolOptBaseline = alpha/.SolveDualLP[mparamsg1,Range@Length@algs];
 	mCombo=Total[u[#]*allMass[[algsI[[#]]]]&/@comboI]/Max[.0001,Total[u[#]&/@comboI]];
-    BigFractionStyle@Column@{Row@{msolOptBaseline,"(Baseline)"},alpha, {algsI[[comboI]],mCombo},VisualMass[mCombo,2,ImageSize->{200,100}]
+    BigFractionStyle@Column@{Row@{msolOptBaseline,"(Baseline)"},alpha, {algsI[[comboI]],mCombo},VisualMass2[mCombo,ImageSize->{80,80}]
 		, Grid@Select[SortBy[EvaluateDual[msolDual,algsI],#[[2]]&],Chop[#[[1]]]!=0&]}/.msolDual
-   ],{{pb,b0},0,1,.001},{{pgammaB,gammaB0},.01,1.5,.001},{{pgammaC,gammaC0},.01,1,.001},{{pg,g0},.01,1,.001}
-   ,{eps1,0,1,.01},{{removeI,{}}},{{comboI,{1,2,3,4}}},{{forceI,{}}}]
+   ],{{pb,b0},0,1,1/100.},{{pgammaB,gammaB0},1/100,3/2,1/100.},{{pgammaC,gammaC0},1/100,1,1/100},{{pg,g0},1/100,1,1/100.}
+   ,{{eps1,.01},0,1,1/100},{{removeI,{}}},{{comboI,Range@Length@algsI}},{{forceI,{}}}]
+
+
+save2=mparamsg1 (* optionally save modifications *)
 
 
 save1=mparamsg1 (* optionally save modifications *)
@@ -1050,12 +1055,16 @@ Column@{Z/.sol,Chop[sol, .0001],EvaluateAlgsByMass[sol,algsI]}
 
 
 (* we can compare closed form solution... it is loose or invalid in some edge cases *)
+algsI={-1,29,30,31,32,33,37}
 Manipulate[Module[{sol2},
 {tb,tgammaB,tgammaC,tg}={pb,pgammaB,pgammaC,pg}; (* allow saving of modifications *)
-sol2 = SolveLPatSol[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg},algsI6sym(*~Union~{6,1,5,27}*),constrD1D2~Union~constrD1D2g];
-Column@{Grid@{{"Closed form",#,N@#}&[exactSolutionForm/.sol2],{"LP sol",#,N@#}&[Z/.sol2]},sol2,EvaluateAlgsByMass[sol2,algsI6sym]}
-],{{pb,b0},0,1,1/1000},{{pgammaB,gammaB0},1/1000,3/2,1/1000},{{pgammaC,gammaC0},1/1000,1,1/1000},{{pg,g0},1/1000,1,1/1000}]
+sol2 = SolveLPatSol[{b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg},algsI(*~Union~{6,1,5,27}*),constrD1D2~Union~constrD1D2g];
+Column@{Grid@{{"Closed form",#,N@#}&[exactSolutionForm/.sol2],{"LP sol",#,N@#}&[Z/.sol2]},sol2,EvaluateAlgsByMass[sol2,algsI]}
+],{{pb,b0},0,1,1/1000},{{pgammaB,gammaB0},1/1000,3/2,1/1000},{{pgammaC,gammaC0},1/1000,1,1/1000},{{pg,g0},1/1000,1,1/1000}]//N
 
 
 
 {b0,gammaB0,gammaC0,g0}={tb,tgammaB,tgammaC,tg} (* persist modifications *)
+
+
+algsI6sym

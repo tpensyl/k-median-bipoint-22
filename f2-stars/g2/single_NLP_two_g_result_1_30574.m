@@ -298,11 +298,27 @@ hybridMass = {
     (*174*),{0,0,0,1,x1,x1,x2,x2,x2}/.{x1->1-Min[(1-b)/(gamma12+gamma13),b/Max[b,1-gamma12-gamma13]],x2->b/Max[b,1-gamma12-gamma13]}
 	(*175: somewhat-symmetrize 167 in noncritical region *)
 	,{0,1,0,1,x2,x2,x1,x1,1}/.{x1->Min[1,(b+gamma13-gamma33)/(1-gamma33)],x2->Max[0,(b+gamma13-1)/(gamma12+gamma13)]}
+    (* 176: counterbalance to 168 , uncertain how useful yet *)
+	,{0,0,1,1,1,0,b,b,b}
+    (* 177 *),{0,1,0,1,0,1,b,b,b}
+    (* 178 *),{0,0,0,1,1,x2,x1,x1,1}/.{x1->Min[1,(b+gamma13-gamma33)/(1-gamma33)],x2->Max[0,(gamma13-1+b)/gamma13]}
+    (* 179 *),{0,0,0,1,1,x1,x2,x2,1}/.{x1->Min[1,(b+gamma13-gamma33)/gamma13],x2->Max[0,(b-gamma33)/(1-gamma33)]}
 };
 CheckMassListRand[hybridMass] (* probabilistically check if the mass balances; it should equal zero *)
 
 
-(* ::Subsubsection:: *)
+(* test out new algos *)
+(*Manipulate[Module[{msolDual,msolOptBaseline,mCombo,params},
+	params = {b->pb,gamma12->pgamma12,gamma13->pgamma13,gamma32->pgamma32,gamma33->pgamma33,g1->pg1,g2->pg2};
+    {mass[[175]]/.params,
+	{gamma11,gamma12,gamma13,gamma11,gamma12,gamma13,
+		1-gamma32-gamma33,gamma32,gamma33}.(mass[[175]]-{a,a,a,b,b,b,b,b,b}) /.
+		{a->1-b}/.params}
+   ],{{pb,b0},0,1,.001},{{pg1,g10},.01,1,.001},{{pg2,g20},.01,1,.001},{{pgamma12,gamma120},.01,1.5,.001}
+   ,{{pgamma13,gamma130},.01,1,.001},{{pgamma32,gamma320},.01,1,.001},{{pgamma33,gamma330},.01,1,.001}]*)
+
+
+(* ::Subsubsection::Closed:: *)
 (*Variables and Constraints:*)
 
 
@@ -547,10 +563,14 @@ Manipulate[EvaluateAlgsByMass[#,algsIm]&@SolveLPatSol[
 	,{{mb,b/.sol},0,1,.0001},{{mgamma12,gamma12/.sol},0,1,.001},{{mgamma13,gamma13/.sol},0,1,.001},{{mgamma32,gamma32/.sol},0,1},{{mgamma33,gamma33/.sol},0,1}]
 
 
-(* heuristic visual proof of algorithm set tightness; b held constant for simplicity *)
-(*fullPlot=Plot3D[(X/.SolveLPatSol[{g1->(g1/.sol),g2->(g2/.sol),b->(b/.sol),gamma12->mgamma12,gamma13->mgamma13,gamma32->.001,gamma33->.001},algsI29])
-	          - (X/.SolveLPatSol[{g1->(g1/.sol),g2->(g2/.sol),b->(b/.sol),gamma12->mgamma12,gamma13->mgamma13,gamma32->.001,gamma33->.200},All]),
-	{mgamma12,gamma12-.02/.sol,gamma12+.001/.sol},{mgamma13,gamma13-.001/.sol,gamma13+.02/.sol},PlotRange->{-.0001,.0001},PerformanceGoal:>"Quality"]*)
+algsI
+(* heuristic visual proof of algorithm set tightness; b held constant for simplicity (a little slow)*)
+fullPlot=Plot3D[(Z/.SolveLPatSol[{g1->(g1/.sol),g2->(g2/.sol),b->(b/.sol),gamma12->mgamma12,gamma13->mgamma13,gamma32->.999*mgamma12,gamma33->.999*mgamma13},algsI])
+	          - (Z/.SolveLPatSol[{g1->(g1/.sol),g2->(g2/.sol),b->(b/.sol),gamma12->mgamma12,gamma13->mgamma13,gamma32->.001,gamma33->.001},algsI30]),
+	{mgamma12,0.002,1},{mgamma13,0.002,1},RegionFunction->Function[{mgamma12,mgamma13,delta},mgamma12+mgamma13<=1.3]]
+
+
+(Z/.SolveLPatSol[{g1->(g1/.sol),g2->(g2/.sol),b->(b/.sol),gamma12->.25,gamma13->.75,gamma32->.001,gamma33->.001},#])&/@{algsI10,algsI29,All}
 
 
 (* ::Subsection:: *)
@@ -582,7 +602,7 @@ EvaluateDual[params_,algIset_:;;]:=Join[
 ]/.params
 
 
-algsI=algsI10
+algsI=algsI9
 sol=solBest;
 solDual=SolveDualLP[sol,algsI];alpha/.solDual
 Grid@SortBy[EvaluateDual[solDual,algsI],#[[2]]&]
@@ -600,27 +620,57 @@ algsI=algsI~Complement~{49,24,5,71,56,145,10,109}~Union~{168};
 algsI=algsI~Complement~{76,55,57,116,13,77,154,41,35,123,50,152,108,157,4,53,138,125,165,14,95,91,135,160,12,36,87,37,75}~Union~{169,170};
 algsI=algsI~Complement~{90,20,44,127,140,27,155,85,164,63,92,142,101,73,144,68,114,46,83,23,103,94,139,80,130,43,86,26,60}~Union~{171,172};
 algsI=algsI~Complement~{161,118,79,52,124,146,38,100,59}~Union~{173,174};
-algsI=algsI~Complement~{167}~Union~{175};
-algsI9
-algsI=algsI9~Join~{146,9,71,124,85}~Complement~{175}
+algsI=algsI~Complement~{167}~Union~{175};algsI9;
+algsIg16sym={-1,169,170,171,172,173,174};
+algsI=algsI9~Join~{146,9,71,124,85}~Union~{176,177,178}(*~Complement~{175}*);
+algsI=algsIg16sym~Join~{146,9,71,124,85}~Join~{168}
+algsI9~Complement~algsI
 Length[algsI]
 {b0,g10,g20,gamma120,gamma130,gamma320,gamma330}={b,g1,g2,gamma12,gamma13,gamma32,gamma33}/.sol
 Manipulate[Module[{msolDual,msolOptBaseline,mCombo},
 	mparams1 = {b->pb,gamma12->pgamma12,gamma13->pgamma13,gamma32->pgamma32,gamma33->pgamma33,g1->pg1,g2->pg2};
-    msolDual = SolveDualLP[mparams1,algsI,Join[u[#]==0&/@iSet,{u[i1]>=.001}]];
+    msolDual = SolveDualLP[mparams1,algsI,Join[u[#]==0&/@removeI,(u[#]>=eps1&)/@forceI]];
 	msolOptBaseline = alpha/.SolveDualLP[mparams1,algsI30];
-	iCombo={2,3}; (* show dual linear combination of certain algos *)
-	mCombo=Total[u[#]*mass[[algsI[[#]]]]&/@iCombo]/Max[.0001,Total[u[#]&/@iCombo]];
-    BigFractionStyle@Column@{{msolOptBaseline,"(Baseline)"},alpha, {"i1/i2 combo", mCombo}, Grid@Select[SortBy[EvaluateDual[msolDual,algsI],#[[2]]&],Chop[#[[1]]]!=0&]}/.msolDual
+	mCombo=Total[u[#]*mass[[algsI[[#]]]]&/@comboI]/Max[.0001,Total[u[#]&/@comboI]];
+    BigFractionStyle@Column@{Row@{msolOptBaseline,"(Baseline)"},alpha, {algsI[[comboI]],mCombo},VisualMass[mCombo,3,ImageSize->{200,100}]
+		, Grid@Select[SortBy[EvaluateDual[msolDual,algsI],#[[2]]&],Chop[#[[1]]]!=0&]}/.msolDual
    ],{{pb,b0},0,1,.001},{{pg1,g10},.01,1,.001},{{pg2,g20},.01,1,.001},{{pgamma12,gamma120},.01,1.5,.001}
    ,{{pgamma13,gamma130},.01,1,.001},{{pgamma32,gamma320},.01,1,.001},{{pgamma33,gamma330},.01,1,.001}
-   ,{eps1,0,1,.01},{{iSet,{}}},{i1,1,Length@algsI,1}]
+   ,{eps1,0,1,.01},{{removeI,{}}},{{comboI,{3,5,6}}},{{forceI,{}}}]
 
 
 save1=mparams1
 
 
 {save1,save2,save3,save4}={b->#[[1]],g1->#[[2]],g2->#[[3]],gamma12->#[[4]],gamma13->#[[5]],gamma32->#[[6]],gamma33->#[[7]]}&/@{{0.6715331873666895`,0.642`,0.833`,0.526`,0.323`,0.21167853121269323`,0.38689227778230223`},{0.601`,0.642`,0.833`,0.21167853121269323`,0.38689227778230223`,0.21167853121269323`,0.38689227778230223`},{0.670401615890807`,0.642`,0.833`,0.13850059367175058`,0.3275635475924704`,0.010000210741811375`,0.24844458802882918`},{0.668327090916148`,0.642`,0.833`,0.2793271784224084`,0.2391828008877306`,0.14020302569038923`,0.23918280088767704`}};
+
+
+(* ::Subsubsection:: *)
+(*Scratch*)
+
+
+algsI9;
+{-1,169,170,171,172,168,176,173,174,175};
+VisualMass[mass[[#]]/.sol,3,ImageSize->{100,100}]&/@%
+{146,124,71,9,85,168}
+VisualMass[mass[[#]]/.sol,3,ImageSize->{100,100}]&/@%
+{177,178,179};
+VisualMass[mass[[#]]/.sol,3,ImageSize->{100,100}]&/@%;
+(* note: algs10 changes value with change in gamma33. algs30 doesnt *)
+(* TODO try adding F1A complements of existing algos? *)
+(* TODO try adding counter shift to 168*)
+
+
+{{{146,124},{0,0.`,0.`,0.9999999999999999`,0.9999999999999999`,0.9999999999999999`,0.9752151951321986`,0.16630752722041464`,0.16630752722040393`}}
+,{{146,124,71},{0,0.`,0.46791978156020125`,1.`,1.`,1.`,0.556408726971795`,0.5564087269718222`,0.5564087269718165`}}
+,{{146,124,9},{0,0.8444262346451141`,0.`,1.`,0.1555737653548859`,0.1555737653548859`,0.8702993228616422`,0.8702993228616541`,0.8702993228616526`}}
+,{{9,85},{0,1.`,0.38170595276382563`,1.`,0.38170595276382563`,0.38170595276382563`,0.6182940472361815`,0.6182940472361743`,0.6182940472361743`}}
+,{{71,85},{0,0.792114941592999`,1.`,1.`,1.`,1.`,0.20788505840702212`,0.2078850584070011`,0.2078850584070011`}}};
+Grid[{First/@%, VisualMass[#[[2]]/.sol,3,ImageSize->{100,100}]&/@%}]
+
+
+(* ::Subsubsection:: *)
+(*Vary Sets*)
 
 
 (* identify algorithms which are definitely not needed at this point*)
@@ -641,14 +691,6 @@ talgsI=algsI
 beatThis = Z/.SolveLPatSol[save4,talgsI]
 tryAddRes=Sort[Table[{alpha/.SolveDualLP[save4,talgsI~Append~algI],algI},{algI,Complement[algsI30,talgsI]}]~Select~(#[[1]]<beatThis-.000001&)]
 tryAddI=Last/@tryAddRes
-
-
-VisualMass[mass[[#]]/.save4,3,ImageSize->{100,100}]&/@algsI9
-VisualMass[mass[[#]]/.save4,3,ImageSize->{100,100}]&/@{9,71,124,85}
-algsI9
-(* note: algs10 changes value with change in gamma33. algs30 doesnt *)
-(* TODO try adding F1A complements of existing algos? *)
-(* TODO try adding counter shift to 168*)
 
 
 SolveNLP[g1/.solBest,g2/.solBest,100,algsI]
