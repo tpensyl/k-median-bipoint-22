@@ -1,5 +1,5 @@
 {"massSubsets" : {
-	"algs13" : [
+	"algs14" : [
 		1, 
 		170, 
 		171, 
@@ -7,12 +7,27 @@
 		173, 
 		174, 
 		175, 
+		176, 
 		147, 
 		10, 
 		72, 
 		125, 
 		86, 
 		169
+	], 
+	"algs12sym2" : [
+		1, 
+		169, 
+		170, 
+		171, 
+		172, 
+		173, 
+		174, 
+		175, 
+		179, 
+		180, 
+		181, 
+		182
 	], 
 	"algs29" : [
 		1, 
@@ -1997,13 +2012,46 @@
 [
 		"0", 
 		"1", 
+		"1 - b\/Max[b, 1 - gamma13]", 
+		"1", 
+		"Max[0, (-1 + b + gamma13)\/(gamma12 + gamma13)]", 
+		"Max[0, (-1 + b + gamma13)\/(gamma12 + gamma13)]", 
+		"b\/Max[b, 1 - gamma13]", 
+		"b\/Max[b, 1 - gamma13]", 
+		"b\/Max[b, 1 - gamma13]"
+	], 
+[
 		"0", 
 		"1", 
+		"1 - b\/Max[b, -gamma13 + gamma32 + gamma33]", 
+		"1", 
+		"Max[0, (-1 + b + gamma13)\/(gamma12 + gamma13)]", 
+		"Max[0, (-1 + b + gamma13)\/(gamma12 + gamma13)]", 
+		"Max[0, Min[1, 1 - (1 - b - gamma13)\/(1 - gamma32 - gamma33)]]", 
+		"b\/Max[b, -gamma13 + gamma32 + gamma33]", 
+		"b\/Max[b, -gamma13 + gamma32 + gamma33]"
+	], 
+[
 		"0", 
 		"1", 
-		"b", 
-		"b", 
-		"b"
+		"1", 
+		"1", 
+		"0", 
+		"0", 
+		"Min[1, b\/(1 - gamma32 - gamma33)]", 
+		"Max[0, Min[1, 1 - (1 - b)\/(gamma32 + gamma33)]]", 
+		"Max[0, Min[1, 1 - (1 - b)\/(gamma32 + gamma33)]]"
+	], 
+[
+		"0", 
+		"0", 
+		"1", 
+		"1", 
+		"1", 
+		"Min[1, b\/gamma13]", 
+		"Max[0, (b - gamma13 - gamma32 - gamma33)\/(1 - gamma32 - gamma33)]", 
+		"Max[0, Min[1, (b - gamma13)\/(gamma32 + gamma33)]]", 
+		"Max[0, Min[1, (b - gamma13)\/(gamma32 + gamma33)]]"
 	], 
 [
 		"0", 
@@ -2011,20 +2059,9 @@
 		"0", 
 		"1", 
 		"1", 
-		"Max[0, (-1 + b + gamma13)\/gamma13]", 
-		"Min[1, (b + gamma13 - gamma33)\/(1 - gamma33)]", 
-		"Min[1, (b + gamma13 - gamma33)\/(1 - gamma33)]", 
-		"1"
-	], 
-[
-		"0", 
-		"0", 
-		"0", 
 		"1", 
-		"1", 
-		"Min[1, (b + gamma13 - gamma33)\/gamma13]", 
-		"Max[0, (b - gamma33)\/(1 - gamma33)]", 
-		"Max[0, (b - gamma33)\/(1 - gamma33)]", 
-		"1"
+		"Min[1, b\/(1 - gamma32 - gamma33)]", 
+		"Max[0, 1 - (1 - b)\/(gamma32 + gamma33)]", 
+		"Max[0, 1 - (1 - b)\/(gamma32 + gamma33)]"
 	]
 ]}
