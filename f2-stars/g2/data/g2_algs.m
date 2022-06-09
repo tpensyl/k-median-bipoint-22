@@ -662,7 +662,7 @@
     Max[0, Min[1, 1 - (1 - b)/(gamma32 + gamma33)]], 
     Max[0, Min[1, 1 - (1 - b)/(gamma32 + gamma33)]]}, 
    {0, 0, 1, 1, 1, Min[1, b/gamma13], 
-    Max[0, (b - gamma13 - gamma32 - gamma33)/(1 - gamma32 - gamma33)], 
+    Max[0, 1 - (1 - b + gamma13)/(1 - gamma32 - gamma33)], 
     Max[0, Min[1, (b - gamma13)/(gamma32 + gamma33)]], 
     Max[0, Min[1, (b - gamma13)/(gamma32 + gamma33)]]}, 
    {0, 0, 0, 1, 1, 1, Min[1, b/(1 - gamma32 - gamma33)], 

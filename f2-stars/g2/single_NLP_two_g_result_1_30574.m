@@ -307,7 +307,7 @@ hybridMass = {
 	(* 180: less sym version of 172, to counter-balance 179 *)
 	,{0,1,1,1,0,0,x1,x2,x2}/.{x1->Min[1,b/(1-gamma32-gamma33)],x2->Max[0,Min[1,1-(1-b)/(gamma32+gamma33)]]}
 	(* 181: sym version of 72 *)
-	,{0,0,1,1,1,x1,x3,x2,x2}/.{x1->Min[1,b/gamma13],x2->Max[0,Min[1,(b-gamma13)/(gamma32+gamma33)]],x3->Max[0,(b-gamma13-gamma32-gamma33)/(1-gamma32-gamma33)]}
+	,{0,0,1,1,1,x1,x3,x2,x2}/.{x1->Min[1,b/gamma13],x2->Max[0,Min[1,(b-gamma13)/(gamma32+gamma33)]],x3->Max[0,1-(1-b+gamma13)/(1-gamma32-gamma33)]}
 	(* 182: 2-sym variant of 174 *)
     ,{0,0,0,1,1,1,x1,x2,x2}/.{x1->Min[1,b/(1-gamma32-gamma33)],x2->Max[0,1-(1-b)/(gamma32+gamma33)]}
 };
@@ -389,10 +389,11 @@ EvaluateAlgsByIndex[params_,algIset_:;;]:=Grid[SortBy[EvaluateAlgs[params,algIse
 
 
 (* assumes gamma3s don't matter *)
-(*todo adjust more subetly and only if needed *)
+(*todo adjust more subtly and only if needed *)
 FixGamma3s[params_]:=Join[Select[params,Not@MemberQ[{gamma32,gamma33},#[[1]]]&],
 			            {gamma32->(gamma12/2/.params),gamma33->(gamma13/2/.params)}]
 ExtractNonLinX[sol_]:=Select[sol,Not@MemberQ[varD1~Union~varD2,#[[1]]]&]
+ConstrainNearby[nonLinParams_,eps_:.05]:=(#[[2]]*(1-eps)<=#[[1]]<=#[[2]]*(1+eps))&/@ExtractNonLin@nonLinParams
 
 
 (* ::Subsection::Closed:: *)
@@ -656,20 +657,23 @@ Length[algsI]
 Manipulate[Module[{msolDual,msolOptBaseline,marginals,jointProbs,conditionalProbs},
 	mparams1 = {b->pb,gamma12->pgamma12,gamma13->pgamma13,gamma32->pgamma32,gamma33->pgamma33,g1->pg1,g2->pg2};
     msolDual = SolveDualLP[mparams1,algsI,Join[u[#]==0&/@removeI,(u[#]>=eps1&)/@forceI]];
-	msolOptBaseline = alpha/.SolveDualLP[mparams1,All];
+	msolOptBaseline = alpha/.SolveDualLP[mparams1,algsI30];
 	marginals=Total[u[#]*mass[[algsI[[#]]]]&/@comboI]/Max[.0001,Total[u[#]&/@comboI]];
-    jointProbs=Total[u[#]*(Transpose[#].#&@{mass[[algsI[[#]]]]})&/@comboI];
-	conditionalProbs=Table[jointProbs[[i,j]]/marginals[[j]],{i,1,Length@jointProbs},{j,1,Length@jointProbs}];
-	BigFractionStyle@Column@{Row@{msolOptBaseline,"(Baseline)",1.305731},alpha, algsI[[comboI]],marginals//StyleMass,
-		Row[{(*Grid[jointProbs],*)Grid[conditionalProbs]},Spacer@12]~StyleMass~8,VisualMass[marginals,3,ImageSize->{120,80}]
-		,Grid@Select[SortBy[EvaluateDual[msolDual,algsI],-#[[1]]&],Chop[#[[1]]]!=0&]}/.msolDual
+    jointProbs=Total[u[#]*(Transpose[#].#&@{mass[[algsI[[#]]]]})&/@comboI/Max[.0001,Total[u[#]&/@comboI]]];
+	conditionalProbs=Table[jointProbs[[i,j]]/marginals[[i]],{i,1,Length@jointProbs},{j,1,Length@jointProbs}];
+	BigFractionStyle@Column@{Row@{msolOptBaseline,"(Baseline)",1.305731},alpha, algsI[[comboI]],marginals~StyleMass~4,Total[u[#]&/@comboI],
+		Row[{Grid[jointProbs],Grid[conditionalProbs]},Spacer@12]~StyleMass~5,VisualMass[marginals,3,ImageSize->{120,80}]
+		,Grid@Select[SortBy[EvaluateDual[msolDual,algsI],-#[[1]]&],Chop[#[[1]]]>=-1&]}/.msolDual
    ],{{pb,b0},0,1,.001},{{pg1,g10},.01,1,.001},{{pg2,g20},.01,1,.001},{{pgamma12,gamma120},.01,1.5,.001}
    ,{{pgamma13,gamma130},.01,1,.001},{{pgamma32,gamma320},.01,1,.001},{{pgamma33,gamma330},.01,1,.001}
-   ,{{eps1,.001},0,1,.001},{{removeI,{}}},{{comboI,Range@Length@algsI}},{{forceI,{}}}]
+   ,{{eps1,.001},0,1,.001},{{removeI,{}}},{{comboI,Complement[Range@Length@algsI,{1}]}},{{forceI,{}}}]
 
 
 save=mparams1;
-{b,g1,g2,gamma12,gamma13,gamma32,gamma33}/.save
+{b->#[[1]],g1->#[[2]],g2->#[[3]],gamma12->#[[4]],gamma13->#[[5]],gamma32->#[[6]],gamma33->#[[7]]}&[{b,g1,g2,gamma12,gamma13,gamma32,gamma33}/.save]
+
+
+{b,g1,g2,gamma12,gamma13,gamma32,gamma33}/.sol
 
 
 (* keep a record of potentially difficult points as regression tests for new algorithm sets *)
@@ -679,7 +683,7 @@ save=mparams1;
 {0.670401615890807`,0.642`,0.833`,0.13850059367175058`,0.3275635475924704`,0.010000210741811375`,0.24844458802882918`},
 {0.668327090916148`,0.642`,0.833`,0.2793271784224084`,0.2391828008877306`,0.14020302569038923`,0.23918280088767704`},
 {0.668327090916148`,0.642`,0.833`,0.01`,1.`,0.01`,0.01`},
-{0.6695385103727721`,0.642`,0.833`,0.294`,0.26`,0.001`,0.001`},
+{0.6700417833928548`,0.642`,0.833`,0.257570731473704`,0.2826650145676018`,0.24635318616467414`,0.24185408887858426`},
 {0.6695385103727721`,0.642`,0.833`,0.3`,0.28`,0.3`,0.28`}};
 
 
@@ -687,13 +691,9 @@ save=mparams1;
 (*Scratch*)
 
 
-tsol=save4;
+tsol=save;
 algsI12sym2
 VisualMass[mass[[#]]/.tsol,3,ImageSize->{100,100}]&/@%
-{147,125,72,10,86,169}
-VisualMass[mass[[#]]/.tsol,3,ImageSize->{100,100}]&/@%
-{178,179,180};
-VisualMass[mass[[#]]/.tsol,3,ImageSize->{100,100}]&/@%;
 (* note: algs10 changes value with change in gamma33. algs30 doesnt *)
 (* TODO try adding F1A complements of existing algos? *)
 (* TODO try adding counter shift to 168*)
