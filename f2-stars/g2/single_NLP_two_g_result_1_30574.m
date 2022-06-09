@@ -310,6 +310,8 @@ hybridMass = {
 	,{0,0,1,1,1,x1,x3,x2,x2}/.{x1->Min[1,b/gamma13],x2->Max[0,Min[1,(b-gamma13)/(gamma32+gamma33)]],x3->Max[0,1-(1-b+gamma13)/(1-gamma32-gamma33)]}
 	(* 182: 2-sym variant of 174 *)
     ,{0,0,0,1,1,1,x1,x2,x2}/.{x1->Min[1,b/(1-gamma32-gamma33)],x2->Max[0,1-(1-b)/(gamma32+gamma33)]}
+(*cheat say cheatcheat*)
+	,{0,1,0,1,x2,x2,x1,x1,x1}/.{x1->Min[1,(b+gamma13)/1],x2->Max[0,(b+gamma13-1)/(gamma12+gamma13)]}
 };
 unusedMass={
     {0,1,0,1,0,1,b,b,b}  (*not actually valid*)
@@ -651,7 +653,8 @@ Grid@SortBy[EvaluateDual[solDual,algsI],#[[2]]&]
 
 
 BigFractionStyle = Style[#, DefaultOptions -> {FractionBoxOptions -> {AllowScriptLevelChange -> False}}] &;
-algsI=algsI12sym2
+algsI=algsI9sym
+algsI=algsI12sym2~Join~{183}
 Length[algsI]
 {b0,g10,g20,gamma120,gamma130,gamma320,gamma330}={b,g1,g2,gamma12,gamma13,gamma32,gamma33}/.save1;
 Manipulate[Module[{msolDual,msolOptBaseline,marginals,jointProbs,conditionalProbs},

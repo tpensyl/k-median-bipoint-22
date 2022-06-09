@@ -273,9 +273,12 @@ Manipulate[Module[{msolDual,msolOptBaseline,mCombo},
 	mparamsg1 = {b->pb,gammaB->pgammaB,gammaC->pgammaC,g->pg};
     msolDual = SolveDualLP[mparamsg1,algsI,Join[u[#]==0&/@removeI,(u[#]>=eps1&)/@forceI]];
 	msolOptBaseline = alpha/.SolveDualLP[mparamsg1,Range@Length@algs];
-	mCombo=Total[u[#]*allMass[[algsI[[#]]]]&/@comboI]/Max[.0001,Total[u[#]&/@comboI]];
-    BigFractionStyle@Column@{Row@{msolOptBaseline,"(Baseline)"},alpha, {algsI[[comboI]],mCombo},VisualMass2[mCombo,ImageSize->{80,80}]
-		, Grid@Select[SortBy[EvaluateDual[msolDual,algsI],#[[2]]&],Chop[#[[1]]]!=0&]}/.msolDual
+	marginals=Total[u[#]*allMass[[algsI[[#]]]]&/@comboI]/Max[.0001,Total[u[#]&/@comboI]];
+    jointProbs=Total[u[#]*(Transpose[#].#&@{allMass[[algsI[[#]]]]})&/@comboI];
+	conditionalProbs=Table[jointProbs[[i,j]]/marginals[[j]],{i,1,Length@jointProbs},{j,1,Length@jointProbs}];
+    BigFractionStyle@Column@{Row@{msolOptBaseline,"(Baseline)"},alpha, algsI[[comboI]],marginals//StyleMass,
+		Row[{Grid[jointProbs],Grid[conditionalProbs]},Spacer@6]//StyleMass,VisualMass2[marginals,ImageSize->{80,80}]
+		,Grid@Select[SortBy[EvaluateDual[msolDual,algsI],#[[2]]&],Chop[#[[1]]]!=0&]}/.msolDual
    ],{{pb,b0},0,1,1/100.},{{pgammaB,gammaB0},1/100,3/2,1/100.},{{pgammaC,gammaC0},1/100,1,1/100},{{pg,g0},1/100,1,1/100.}
    ,{{eps1,.01},0,1,1/100},{{removeI,{}}},{{comboI,Range@Length@algsI}},{{forceI,{}}}]
 
