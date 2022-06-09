@@ -160,8 +160,9 @@ constrBasic = Join[{Z>=0,0<=b<=1,0<=gammaB,0<=gammaC<=1,gammaC<=gammaB},#>=0&/@U
 
 
 (* Show tight algorithms *)
+StyleMass[mass_]:=Style[mass,PrintPrecision->2]
 EvaluateAlgs[params_,algIset_:;;]:=(
-		{algCost, Style[algMass,PrintPrecision->2], VisualMass2[algMass,ImageSize->{100,60}], algIndex}/.#&/@algsWithMass[[algIset]]
+		{algCost, algMass//StyleMass, VisualMass2[algMass,ImageSize->{100,60}], algIndex}/.#&/@algsWithMass[[algIset]]
 	)/.params
 EvaluateAlgsByCost[params_,algIset_:;;]:=Grid[SortBy[EvaluateAlgs[params,algIset],First]~Prepend~{"Alg Cost ", "Alg Mass","Alg Index"},Alignment->Left]
 EvaluateAlgsByMass[params_,algIset_:;;]:=Grid[SortBy[EvaluateAlgs[params,algIset],#[[2]]&]~Prepend~{"Alg Cost ", "Alg Mass","Alg Index"},Alignment->Left]
@@ -244,7 +245,7 @@ SolveDualLP[nonLinParams_,algI:_?IndexQ:All,constrExtra:{___?EquationQ}:{}]:=Mod
 ]~Join~nonLinParams
 EvaluateDual[params_,algIset_:;;]:=Join[
 	{{"u[alg]", "Alg Mass",,"Global Index","Local Index"}},
-	Table[{u[i], Style[algMass,PrintPrecision->2], VisualMass2[algMass,ImageSize->{150,100},ImageSize->{75,50}],
+	Table[{u[i], algMass//StyleMass, VisualMass2[algMass,ImageSize->{150,80}],
 			 algIndex, i}/.algsWithMass[[algIset[[i]]]],{i,1,Length[algIset]}]
 ]/.params
 
@@ -886,7 +887,7 @@ Plot[{u[4],u[5]}/(u[4]+u[5])/.SolveDualLP[{b->(b/.sol),gammaB->pgammaB,gammaC->.
 (*Exact form*)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Result*)
 
 
@@ -994,8 +995,19 @@ Manipulate[
 ,{{ghat1,.642},0.001,1},{{ghat2,.6586},0.001,1},{{ghat3,.833},0.001,1}]
 
 
+(* ::Subsection::Closed:: *)
+(*Randomization 2*)
+
+
+(* even if we enforce total d-variable sums, it's not enough *)
+D2opt=Total@varD2/.SolveLPatSol[SolveX[ghat,50]~Join~ {gammaC->.01},algsI]
+Z/.SolveLPatSol[SolveX[ghat,50]~Join~ {gammaC->.01},algsI,{Total[varD2]==D2opt}]
+Z/.SolveLPatSol[SolveX[ghat-.01,50]~Join~ {gammaC->.01},algsI,{Total[varD2]==D2opt}]
+Z/.SolveLPatSol[SolveX[ghat+.01,50]~Join~ {gammaC->.01},algsI,{Total[varD2]==D2opt}]
+
+
 (* ::Section::Closed:: *)
-(*Previous Exploration*)
+(*Other Exploration*)
 
 
 (* ::Subsection::Closed:: *)
