@@ -71,7 +71,7 @@ Cf1b[d1_,d2_,p1_,p2_,p3_,g1_,g2_]:=p2*d2+(1-p2)*d1+(1-p2)*(1-p1)*(p3*g1+(1-p3)(g
 
 (*## # Copy and paste from python script ## #*)
 (* Let me know if I should consider some other notation, this is a little messy, especially the 'd' variables  *)
-cost[p11_,p12_,p13_,p21_,p22_,p23_,p31_,p32_,p33_] := Total@{
+costSplit[p11_,p12_,p13_,p21_,p22_,p23_,p31_,p32_,p33_] := {
 	Cf1[d111,d211,p11,p21,1],    (* J11  : F11 and F21 *)
 	Cf1[d112,d212,p11,p22,1],    (* J12  : F11 and F22 *)
 	Cf1[d113,d213,p11,p23,1],    (* J13  : F11 and F23 *)
@@ -91,6 +91,7 @@ cost[p11_,p12_,p13_,p21_,p22_,p23_,p31_,p32_,p33_] := Total@{
 	Cf1[d1332,d332,p13,p32,1],   (* J3_ 32: F13 and F32 *)
 	Cf1[d1333,d333,p13,p33,1]    (* J3_ 33: F13 and F33 *)
 }
+cost[p11_,p12_,p13_,p21_,p22_,p23_,p31_,p32_,p33_] := Total@cost[p11,p12,p13,p21,p22,p23,p31,p32,p33]
 
 costLiSven = b*(3-2b)Total[varD2]+(1-b)*Total[varD1];
 
@@ -307,7 +308,7 @@ hybridMass = {
 	(* 180: less sym version of 172, to counter-balance 179 *)
 	,{0,1,1,1,0,0,x1,x2,x2}/.{x1->Min[1,b/(1-gamma32-gamma33)],x2->Max[0,Min[1,1-(1-b)/(gamma32+gamma33)]]}
 	(* 181: sym version of 72 *)
-	,{0,0,1,1,1,x1,x3,x2,x2}/.{x1->Min[1,b/gamma13],x2->Max[0,Min[1,(b-gamma13)/(gamma32+gamma33)]],x3->Max[0,1-(1-b+gamma13)/(1-gamma32-gamma33)]}
+	,{0,0,1,1,1,x1,x3,x2,x2}/.{x1->Min[1,b/gamma13],x2->Max[0,Min[1,(b-gamma13)/(gamma32+gamma33)]],x3->Max[0,(b-gamma13-gamma32-gamma33)/(1-gamma32-gamma33)]}
 	(* 182: 2-sym variant of 174 *)
     ,{0,0,0,1,1,1,x1,x2,x2}/.{x1->Min[1,b/(1-gamma32-gamma33)],x2->Max[0,1-(1-b)/(gamma32+gamma33)]}
 };
@@ -389,10 +390,14 @@ EvaluateAlgsByIndex[params_,algIset_:;;]:=Grid[SortBy[EvaluateAlgs[params,algIse
 
 
 (* assumes gamma3s don't matter *)
-(*todo adjust more subtly and only if needed *)
+(*todo adjust more subetly and only if needed *)
 FixGamma3s[params_]:=Join[Select[params,Not@MemberQ[{gamma32,gamma33},#[[1]]]&],
 			            {gamma32->(gamma12/2/.params),gamma33->(gamma13/2/.params)}]
 ExtractNonLinX[sol_]:=Select[sol,Not@MemberQ[varD1~Union~varD2,#[[1]]]&]
+ShowClients[sol_]:=Grid@{{d211,d221,d231,"  ",d212,d222,d232,"  ",d213,d223,d233},
+				    {d111,d121,d131,"  ",d112,d122,d132,"  ",d113,d123,d133},{" "},
+					{d1131,d1231,d1331,"  ",d1132,d1232,d1332,"  ",d1133,d1233,d1333},
+				    {d311,d321,d331,"  ",d312,d322,d332,"  ",d313,d323,d333}}/.sol
 ConstrainNearby[nonLinParams_,eps_:.05]:=(#[[2]]*(1-eps)<=#[[1]]<=#[[2]]*(1+eps))&/@ExtractNonLin@nonLinParams
 
 
@@ -430,6 +435,10 @@ Z/.%
 (*I think this NLP could be simplified by padding such that |F2C|=min{|F2B|,|Y|}, to eliminate need for gammaC variable. However, in my attempts to do so, it didn't actually seem to speed up the NLP, if anything it made it less likely to converge to the correct solution.*)
 (**)
 (*Fortunately, adversary appears unable to take advantage of the variables gamma32, gamma33, as their value doesn't seem to affect the optima.*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*Output*)
 
 
 outputFile=FileNameJoin[{NotebookDirectory[],"data","g2_algs.m"}]
@@ -653,17 +662,17 @@ Grid@SortBy[EvaluateDual[solDual,algsI],#[[2]]&]
 BigFractionStyle = Style[#, DefaultOptions -> {FractionBoxOptions -> {AllowScriptLevelChange -> False}}] &;
 algsI=algsI12sym2
 Length[algsI]
-{b0,g10,g20,gamma120,gamma130,gamma320,gamma330}={b,g1,g2,gamma12,gamma13,gamma32,gamma33}/.save1;
+{b0,g10,g20,gamma120,gamma130,gamma320,gamma330}={b,g1,g2,gamma12,gamma13,gamma32,gamma33}/.sol;
 Manipulate[Module[{msolDual,msolOptBaseline,marginals,jointProbs,conditionalProbs},
 	mparams1 = {b->pb,gamma12->pgamma12,gamma13->pgamma13,gamma32->pgamma32,gamma33->pgamma33,g1->pg1,g2->pg2};
     msolDual = SolveDualLP[mparams1,algsI,Join[u[#]==0&/@removeI,(u[#]>=eps1&)/@forceI]];
 	msolOptBaseline = alpha/.SolveDualLP[mparams1,algsI30];
 	marginals=Total[u[#]*mass[[algsI[[#]]]]&/@comboI]/Max[.0001,Total[u[#]&/@comboI]];
-    jointProbs=Total[u[#]*(Transpose[#].#&@{mass[[algsI[[#]]]]})&/@comboI/Max[.0001,Total[u[#]&/@comboI]]];
-	conditionalProbs=Table[jointProbs[[i,j]]/marginals[[i]],{i,1,Length@jointProbs},{j,1,Length@jointProbs}];
-	BigFractionStyle@Column@{Row@{msolOptBaseline,"(Baseline)",1.305731},alpha, algsI[[comboI]],marginals~StyleMass~4,Total[u[#]&/@comboI],
-		Row[{Grid[jointProbs],Grid[conditionalProbs]},Spacer@12]~StyleMass~5,VisualMass[marginals,3,ImageSize->{120,80}]
-		,Grid@Select[SortBy[EvaluateDual[msolDual,algsI],-#[[1]]&],Chop[#[[1]]]>=-1&]}/.msolDual
+    jointProbs=Total[u[#]*(Transpose[#].#&@{mass[[algsI[[#]]]]})&/@comboI]/Max[.0001,Total[u[#]&/@comboI]];
+	conditionalProbs=Table[jointProbs[[i,j]]/marginals[[j]],{i,1,Length@jointProbs},{j,1,Length@jointProbs}];
+	BigFractionStyle@Column@{Row@{msolOptBaseline,"(Baseline)",1.305731},alpha, algsI[[comboI]],marginals~StyleMass~4,
+		Row[{(*Grid[jointProbs],*)Grid[conditionalProbs]},Spacer@12]~StyleMass~4,VisualMass[marginals,3,ImageSize->{120,80}]
+		,Grid@Select[SortBy[EvaluateDual[msolDual,algsI],-#[[1]]&],Chop[#[[1]]]!=0&]}/.msolDual
    ],{{pb,b0},0,1,.001},{{pg1,g10},.01,1,.001},{{pg2,g20},.01,1,.001},{{pgamma12,gamma120},.01,1.5,.001}
    ,{{pgamma13,gamma130},.01,1,.001},{{pgamma32,gamma320},.01,1,.001},{{pgamma33,gamma330},.01,1,.001}
    ,{{eps1,.001},0,1,.001},{{removeI,{}}},{{comboI,Complement[Range@Length@algsI,{1}]}},{{forceI,{}}}]
