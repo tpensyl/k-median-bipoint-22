@@ -1,0 +1,104 @@
+{"massSubsets" : {
+	"all" : [
+		1, 
+		2, 
+		3, 
+		4, 
+		5, 
+		6, 
+		7, 
+		8, 
+		9, 
+		10, 
+		11, 
+		12, 
+		13, 
+		14
+	]
+}, 
+"massAll" : [
+[
+		"0", 
+		"1", 
+		"Min[1, b\/(1 - gammaC2)]", 
+		"Max[0, (-1 + b + gammaC2)\/gammaC2]"
+	], 
+[
+		"0", 
+		"Max[0, (-1 + b + gammaA2)\/gammaA2]", 
+		"Min[1, (b + gammaA2 - gammaC2)\/(1 - gammaC2)]", 
+		"1"
+	], 
+[
+		"0", 
+		"Min[1, (b + gammaA2 - gammaC2)\/gammaA2]", 
+		"Max[0, (b - gammaC2)\/(1 - gammaC2)]", 
+		"1"
+	], 
+[
+		"1", 
+		"0", 
+		"Min[1, b\/(1 - gammaC2)]", 
+		"Max[0, (-1 + b + gammaC2)\/gammaC2]"
+	], 
+[
+		"1", 
+		"Max[0, (-1 + b + gammaC2)\/gammaA2]", 
+		"Min[1, b\/(1 - gammaC2)]", 
+		"0"
+	], 
+[
+		"1", 
+		"Min[1, b\/gammaA2]", 
+		"Max[0, (b - gammaA2)\/(1 - gammaC2)]", 
+		"0"
+	], 
+[
+		"1", 
+		"Min[1, b\/gammaA2]", 
+		"Max[0, (b - gammaA2 - gammaC2)\/(1 - gammaC2)]", 
+		"Min[1, Max[0, (b - gammaA2)\/gammaC2]]"
+	], 
+[
+		"1", 
+		"Min[1, Max[0, (b - gammaC2)\/gammaA2]]", 
+		"Max[0, (b - gammaA2 - gammaC2)\/(1 - gammaC2)]", 
+		"Min[1, b\/gammaC2]"
+	], 
+[
+		"Max[0, (-1 + b + gammaA2)\/gammaA2]", 
+		"0", 
+		"Min[1, (b + gammaA2 - gammaC2)\/(1 - gammaC2)]", 
+		"1"
+	], 
+[
+		"Max[0, (-1 + b + gammaC2)\/gammaA2]", 
+		"1", 
+		"Min[1, b\/(1 - gammaC2)]", 
+		"0"
+	], 
+[
+		"Min[1, b\/gammaA2]", 
+		"1", 
+		"Max[0, (b - gammaA2)\/(1 - gammaC2)]", 
+		"0"
+	], 
+[
+		"Min[1, (b + gammaA2 - gammaC2)\/gammaA2]", 
+		"0", 
+		"Max[0, (b - gammaC2)\/(1 - gammaC2)]", 
+		"1"
+	], 
+[
+		"Min[1, Max[0, (b - gammaC2)\/gammaA2]]", 
+		"1", 
+		"Max[0, (b - gammaA2 - gammaC2)\/(1 - gammaC2)]", 
+		"Min[1, b\/gammaC2]"
+	], 
+[
+		"Min[1, Max[0, (b - gammaC2)\/gammaA2]]", 
+		"Min[1, (b + gammaA2 - gammaC2)\/gammaA2]", 
+		"Max[0, (b - gammaA2 - gammaC2)\/(1 - gammaC2)]", 
+		"1"
+	]
+]}
