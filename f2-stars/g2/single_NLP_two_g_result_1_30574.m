@@ -91,7 +91,7 @@ costSplit[p11_,p12_,p13_,p21_,p22_,p23_,p31_,p32_,p33_] := {
 	Cf1[d1332,d332,p13,p32,1],   (* J3_ 32: F13 and F32 *)
 	Cf1[d1333,d333,p13,p33,1]    (* J3_ 33: F13 and F33 *)
 }
-cost[p11_,p12_,p13_,p21_,p22_,p23_,p31_,p32_,p33_] := Total@cost[p11,p12,p13,p21,p22,p23,p31,p32,p33]
+cost[p11_,p12_,p13_,p21_,p22_,p23_,p31_,p32_,p33_] := Total@costSplit[p11,p12,p13,p21,p22,p23,p31,p32,p33]
 
 costLiSven = b*(3-2b)Total[varD2]+(1-b)*Total[varD1];
 
@@ -596,7 +596,7 @@ Manipulate[EvaluateAlgsByMass[#,algsIm]&@SolveLPatSol[
 	,{{mb,b/.tsol},0,1,.0001},{{mgamma12,gamma12/.tsol},0,1,.001},{{mgamma13,gamma13/.tsol},0,1,.001},{{mgamma32,gamma32/.tsol},0,1},{{mgamma33,gamma33/.tsol},0,1}]
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Check looseness*)
 
 
@@ -620,7 +620,7 @@ fullPlot=Plot3D[{Z/.SolveLPatSol[{g1->(g1/.sol),g2->(g2/.sol),b->(b/.sol),gamma1
 (Z/.SolveLPatSol[{g1->(g1/.sol),g2->(g2/.sol),b->(b/.sol),gamma12->.3,gamma13->.27,gamma32->.001,gamma33->.001},#])&/@{algsI9sym,algsI10sym2,algsI30,All}
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Dual*)
 
 
@@ -655,7 +655,7 @@ solDual=SolveDualLP[sol,algsI];alpha/.solDual
 Grid@SortBy[EvaluateDual[solDual,algsI],#[[2]]&]
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Manipulate*)
 
 
@@ -696,7 +696,7 @@ save=mparams1;
 {0.6695385103727721`,0.642`,0.833`,0.3`,0.28`,0.3`,0.28`}};
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Scratch*)
 
 
