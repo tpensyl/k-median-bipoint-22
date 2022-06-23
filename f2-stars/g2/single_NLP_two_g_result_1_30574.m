@@ -442,12 +442,12 @@ Z/.%
 
 
 outputFile=FileNameJoin[{NotebookDirectory[],"data","g2_algs.m"}]
-outputObj={massSubsets->{algs12sym2->algsI12sym2,algs14->algsI14,algs29->algsI29},massAll->mass};
+outputObj={massSubsets->{algs12sym2->algsI12sym2,algs14->algsI14,algsBasic30->algsI30, algs29->algsI29},massAll->mass};
 Put[outputObj,outputFile]
 
 
 outputFile=FileNameJoin[{NotebookDirectory[],"data","g2_algs.json"}];
-outputObj={"massSubsets"->{"algs12sym2"->algsI12sym2,"algs14"->algsI14,"algs29"->algsI29},"massAll"->Map[ToString@InputForm@#&,mass,{2}]};
+outputObj={"massSubsets"->{"algs12sym2"->algsI12sym2,"algs14"->algsI14,"algs29"->algsI29,"algsBasic30"->algsI30},"massAll"->Map[ToString@InputForm@#&,mass,{2}]};
 Export[outputFile,outputObj,"JSON"]
 
 
