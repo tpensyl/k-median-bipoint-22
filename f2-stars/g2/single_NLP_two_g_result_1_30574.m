@@ -8,7 +8,7 @@
 (*Notebook Settings*)
 
 
-SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->9]
+SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->6]
 SetOptions[Plot3D, AxesLabel->Automatic,
 	PlotStyle->Opacity[.7], ClippingStyle->None,
 	BoundaryStyle -> Directive[Black, Thick]];
@@ -72,6 +72,36 @@ Cf1b[d1_,d2_,p1_,p2_,p3_,g1_,g2_]:=p2*d2+(1-p2)*d1+(1-p2)*(1-p1)*(p3*g1+(1-p3)(g
 (*## # Copy and paste from python script ## #*)
 (* Let me know if I should consider some other notation, this is a little messy, especially the 'd' variables  *)
 costSplit[p11_,p12_,p13_,p21_,p22_,p23_,p31_,p32_,p33_] := {
+	Cf1[d111,d211,p11,p21,1],    (* J11  : F11 and F21 *)
+	Cf1[d112,d212,p11,p22,1],    (* J12  : F11 and F22 *)
+	Cf1[d113,d213,p11,p23,1],    (* J13  : F11 and F23 *)
+	Cf1[d1131,d311,p11,p31,g1],  (* J1_ 31: F11 and F31 *)(* See d1131 as d1_ 1,31 *)
+	Cf1[d1132,d312,p11,p32,g1],  (* J1_ 32: F11 and F32 *)
+	Cf1[d1133,d313,p11,p33,g1],  (* J1_ 33: F11 and F33 *)
+	Cf1[d121,d221,p12,p21,1/g1], (* J21  : F12 and F21 *)
+	Cf1[d122,d222,p12,p22,1/g1], (* J22  : F12 and F22 *)
+	Cf1[d123,d223,p12,p23,1 + (1/g1-1)*(1-Min[p22,p21])], (* J23  : F12 and F23 *)
+	Cf1[d1231,d321,p12,p31,g2 + (1-g2)*(1-Min[p22,p21])],  (* J2_ 31: F12 and F31 *)
+	Cf1[d1232,d322,p12,p32,g2 + (1-g2)*(1-Min[p22,p21])],  (* J2_ 32: F12 and F32 *)
+	Cf1[d1233,d323,p12,p33,g2 + (1-g2)*(1-Min[p22,p21])],  (* J2_ 33: F12 and F33 *)
+	Cf1[d131,d231,p13,p21,1/g2], (* J31  : F13 and F21 *)
+	Cf1[d132,d232,p13,p22,1/g2], (* J32  : F13 and F22 *)
+	Cf1[d133,d233,p13,p23,1/g2], (* J33  : F13 and F23 *)
+	Cf1[d1331,d331,p13,p31,1],   (* J3_ 31: F13 and F31 *)
+	Cf1[d1332,d332,p13,p32,1],   (* J3_ 32: F13 and F32 *)
+	Cf1[d1333,d333,p13,p33,1]    (* J3_ 33: F13 and F33 *)
+}
+cost[p11_,p12_,p13_,p21_,p22_,p23_,p31_,p32_,p33_] := Total@costSplit[p11,p12,p13,p21,p22,p23,p31,p32,p33]
+
+costLiSven = b*(3-2b)Total[varD2]+(1-b)*Total[varD1];
+
+
+(* ::Subsubsection::Closed:: *)
+(*Client Cost (Old)*)
+
+
+(*the cost function  had a flaw in J2_ 31, J2_ 32, J2_ 33 , since a g2-bound may not always be available*)
+costSplitOld[p11_,p12_,p13_,p21_,p22_,p23_,p31_,p32_,p33_] := {
 	Cf1[d111,d211,p11,p21,1],    (* J11  : F11 and F21 *)
 	Cf1[d112,d212,p11,p22,1],    (* J12  : F11 and F22 *)
 	Cf1[d113,d213,p11,p23,1],    (* J13  : F11 and F23 *)
@@ -406,14 +436,14 @@ ConstrainNearby[nonLinParams_,eps_:.05]:=(#[[2]]*(1-eps)<=#[[1]]<=#[[2]]*(1+eps)
 
 
 algsI29={1,6,14,21,25,28,36,42,45,50,51,53,56,72,77,80,86,91,109,119,124,125,128,141,147,153,156,162,168};
-algsI30={1,6,10,14,21,25,28,36,42,43,45,50,51,53,56,72,77,80,86,91,109,119,124,125,128,141,147,153,156,162};
+algsI30={1,6,10,14,21,25,28,36,42,43,45,50,51,53,56,72,77,80,86,91,109,119,124,125,128,141,147,153,156,162}; (* basic *)
 algsI9={1,169,170,171,172,173,174,175,176}; (* handles critical point, but does worse at localMax1 *)
 algsI13={1,170,171,172,173,174,175,147,10,72,125,86,169}; (* handles localMax1 *)
 algsI14={1,170,171,172,173,174,175,176,147,10,72,125,86,169}; (* handles localMax1+2 *)
 algsI9sym={1,169,170,171,172,173,174,175,178}; (*symmetric in F31/F32/F33 and F22/F23, but does poorly at save6 *)
 algsI10sym2={1,169,170,171,172,173,174,175,179,180}; (*symmetric in F32/F33 and F22/F23, fails at save7*)
 algsI12sym2={1,169,170,171,172,173,174,175,179,180,181,182};
-algsI=algsI12sym2
+algsI=algsI30
 Length@algsI
 solBest={b->0.6715331873666895`,d111->0.046860368382269514`,d112->0.02456331335018877`,d113->0.044074854304643814`,d1131->0.07144707077351625`,d1132->0.02986653206436148`,d1133->0.061099227368884346`,d121->0.04695211510711601`,d122->0.0752748957991086`,d123->0.13931896491196272`,d1231->0.05883468012890778`,d1232->0.024422132431967978`,d1233->0.050364903626525424`,d131->0.07457214633931589`,d132->0.061522492525401866`,d133->0.11153079587680949`,d1331->0.3156463103941929`,d1332->0.12667137180358412`,d1333->0.26456720159876934`,d211->1.3055804129059156`*^-10,d212->0.013885414272666036`,d213->0.02619922345614402`,d221->1.3055806300140836`*^-10,d222->0.024068020757453987`,d223->0.042253564881508485`,d231->1.3055745614447794`*^-10,d232->0.021952084030530877`,d233->0.0410386302990541`,d311->0.05434950802505862`,d312->0.021182405258084562`,d313->0.044979431676897816`,d321->0.04555546206374887`,d322->0.017939953371794066`,d323->0.037662673383040815`,d331->0.13291684395399628`,d332->0.055358001630245506`,d333->0.11368619189433839`,g1->0.642`,g2->0.833`,gamma12->0.21167853121269323`,gamma13->0.38689227778230223`,gamma32->0.18043327359652983`,gamma33->0.3749367318689848`,Z->1.3057309344455876`,g1->0.642`,g2->0.833`};
 {g1hat,g2hat}={g1,g2}/.solBest
@@ -430,7 +460,7 @@ Z/.%
 
 
 (* ::Text:: *)
-(*By setting g1=.642 and g2=.833, we get approximation factor 1.305731 , using 13 extreme point algorithms (+ LiSven), (including one or more which must be decomposed under the hood)*)
+(*By setting g1=.642 and g2=.833, we get approximation factor???*)
 (**)
 (*I think this NLP could be simplified by padding such that |F2C|=min{|F2B|,|Y|}, to eliminate need for gammaC variable. However, in my attempts to do so, it didn't actually seem to speed up the NLP, if anything it made it less likely to converge to the correct solution.*)
 (**)
@@ -660,13 +690,13 @@ Grid@SortBy[EvaluateDual[solDual,algsI],#[[2]]&]
 
 
 BigFractionStyle = Style[#, DefaultOptions -> {FractionBoxOptions -> {AllowScriptLevelChange -> False}}] &;
-algsI=algsI12sym2
+algsI=algsI30
 Length[algsI]
 {b0,g10,g20,gamma120,gamma130,gamma320,gamma330}={b,g1,g2,gamma12,gamma13,gamma32,gamma33}/.sol;
 Manipulate[Module[{msolDual,msolOptBaseline,marginals,jointProbs,conditionalProbs},
 	mparams1 = {b->pb,gamma12->pgamma12,gamma13->pgamma13,gamma32->pgamma32,gamma33->pgamma33,g1->pg1,g2->pg2};
     msolDual = SolveDualLP[mparams1,algsI,Join[u[#]==0&/@removeI,(u[#]>=eps1&)/@forceI]];
-	msolOptBaseline = alpha/.SolveDualLP[mparams1,algsI30];
+	msolOptBaseline = alpha/.SolveDualLP[mparams1,Range[Length[rawMass]+1]];
 	marginals=Total[u[#]*mass[[algsI[[#]]]]&/@comboI]/Max[.0001,Total[u[#]&/@comboI]];
     jointProbs=Total[u[#]*(Transpose[#].#&@{mass[[algsI[[#]]]]})&/@comboI]/Max[.0001,Total[u[#]&/@comboI]];
 	conditionalProbs=Table[jointProbs[[i,j]]/marginals[[j]],{i,1,Length@jointProbs},{j,1,Length@jointProbs}];
