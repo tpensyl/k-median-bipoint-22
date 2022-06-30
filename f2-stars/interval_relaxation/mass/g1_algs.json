@@ -1,0 +1,352 @@
+{
+	"massSubsets":{
+		"algs6sym":[
+			38,
+			29,
+			30,
+			31,
+			32,
+			33,
+			37
+		],
+		"algs7":[
+			38,
+			8,
+			23,
+			29,
+			30,
+			31,
+			32,
+			33
+		],
+		"algs7b":[
+			38,
+			4,
+			8,
+			23,
+			30,
+			31,
+			32,
+			33
+		],
+		"algs10":[
+			38,
+			1,
+			4,
+			5,
+			6,
+			8,
+			9,
+			11,
+			16,
+			23,
+			28
+		]
+	},
+	"massAll":[
+		[
+			"1",
+			"0",
+			"1",
+			"0",
+			"Min[1, b\/gammaC2]",
+			"Max[0, (b - gammaC2)\/(1 - gammaC2)]"
+		],
+		[
+			"0",
+			"1",
+			"1",
+			"0",
+			"Min[1, b\/gammaC2]",
+			"Max[0, (b - gammaC2)\/(1 - gammaC2)]"
+		],
+		[
+			"1",
+			"0",
+			"0",
+			"1",
+			"Min[1, b\/gammaC2]",
+			"Max[0, (b - gammaC2)\/(1 - gammaC2)]"
+		],
+		[
+			"0",
+			"1",
+			"0",
+			"1",
+			"Min[1, b\/gammaC2]",
+			"Max[0, (b - gammaC2)\/(1 - gammaC2)]"
+		],
+		[
+			"1",
+			"0",
+			"1",
+			"0",
+			"Max[0, 1 - (1 - b)\/gammaC2]",
+			"Min[1, b\/(1 - gammaC2)]"
+		],
+		[
+			"0",
+			"1",
+			"1",
+			"0",
+			"Max[0, 1 - (1 - b)\/gammaC2]",
+			"Min[1, b\/(1 - gammaC2)]"
+		],
+		[
+			"1",
+			"0",
+			"0",
+			"1",
+			"Max[0, 1 - (1 - b)\/gammaC2]",
+			"Min[1, b\/(1 - gammaC2)]"
+		],
+		[
+			"0",
+			"1",
+			"0",
+			"1",
+			"Max[0, 1 - (1 - b)\/gammaC2]",
+			"Min[1, b\/(1 - gammaC2)]"
+		],
+		[
+			"1",
+			"0",
+			"1",
+			"Min[1, b\/gammaA2]",
+			"Max[0, 1 - (1 - b + gammaA2)\/gammaC2]",
+			"Max[0, Min[1, (b - gammaA2)\/(1 - gammaC2)]]"
+		],
+		[
+			"1",
+			"0",
+			"Min[1, b\/gammaA2]",
+			"1",
+			"Max[0, 1 - (1 - b + gammaA2)\/gammaC2]",
+			"Max[0, Min[1, (b - gammaA2)\/(1 - gammaC2)]]"
+		],
+		[
+			"0",
+			"1",
+			"1",
+			"Min[1, b\/gammaA2]",
+			"Max[0, 1 - (1 - b + gammaA2)\/gammaC2]",
+			"Max[0, Min[1, (b - gammaA2)\/(1 - gammaC2)]]"
+		],
+		[
+			"0",
+			"1",
+			"Min[1, b\/gammaA2]",
+			"1",
+			"Max[0, 1 - (1 - b + gammaA2)\/gammaC2]",
+			"Max[0, Min[1, (b - gammaA2)\/(1 - gammaC2)]]"
+		],
+		[
+			"1",
+			"0",
+			"1",
+			"Min[1, b\/gammaA2]",
+			"Max[0, Min[1, (b - gammaA2)\/gammaC2]]",
+			"Max[0, (b - gammaA2 - gammaC2)\/(1 - gammaC2)]"
+		],
+		[
+			"1",
+			"0",
+			"Min[1, b\/gammaA2]",
+			"1",
+			"Max[0, Min[1, (b - gammaA2)\/gammaC2]]",
+			"Max[0, (b - gammaA2 - gammaC2)\/(1 - gammaC2)]"
+		],
+		[
+			"0",
+			"1",
+			"1",
+			"Min[1, b\/gammaA2]",
+			"Max[0, Min[1, (b - gammaA2)\/gammaC2]]",
+			"Max[0, (b - gammaA2 - gammaC2)\/(1 - gammaC2)]"
+		],
+		[
+			"0",
+			"1",
+			"Min[1, b\/gammaA2]",
+			"1",
+			"Max[0, Min[1, (b - gammaA2)\/gammaC2]]",
+			"Max[0, (b - gammaA2 - gammaC2)\/(1 - gammaC2)]"
+		],
+		[
+			"1",
+			"0",
+			"0",
+			"Max[0, 1 - (1 - b)\/gammaA2]",
+			"Min[1, Max[0, 1 - (1 - b - gammaA2)\/gammaC2]]",
+			"Min[1, (b + gammaA2)\/(1 - gammaC2)]"
+		],
+		[
+			"1",
+			"0",
+			"Max[0, 1 - (1 - b)\/gammaA2]",
+			"0",
+			"Min[1, Max[0, 1 - (1 - b - gammaA2)\/gammaC2]]",
+			"Min[1, (b + gammaA2)\/(1 - gammaC2)]"
+		],
+		[
+			"0",
+			"1",
+			"0",
+			"Max[0, 1 - (1 - b)\/gammaA2]",
+			"Min[1, Max[0, 1 - (1 - b - gammaA2)\/gammaC2]]",
+			"Min[1, (b + gammaA2)\/(1 - gammaC2)]"
+		],
+		[
+			"0",
+			"1",
+			"Max[0, 1 - (1 - b)\/gammaA2]",
+			"0",
+			"Min[1, Max[0, 1 - (1 - b - gammaA2)\/gammaC2]]",
+			"Min[1, (b + gammaA2)\/(1 - gammaC2)]"
+		],
+		[
+			"1",
+			"0",
+			"0",
+			"Max[0, 1 - (1 - b)\/gammaA2]",
+			"Min[1, (b + gammaA2)\/gammaC2]",
+			"Min[1, Max[0, (b + gammaA2 - gammaC2)\/(1 - gammaC2)]]"
+		],
+		[
+			"1",
+			"0",
+			"Max[0, 1 - (1 - b)\/gammaA2]",
+			"0",
+			"Min[1, (b + gammaA2)\/gammaC2]",
+			"Min[1, Max[0, (b + gammaA2 - gammaC2)\/(1 - gammaC2)]]"
+		],
+		[
+			"0",
+			"1",
+			"0",
+			"Max[0, 1 - (1 - b)\/gammaA2]",
+			"Min[1, (b + gammaA2)\/gammaC2]",
+			"Min[1, Max[0, (b + gammaA2 - gammaC2)\/(1 - gammaC2)]]"
+		],
+		[
+			"0",
+			"1",
+			"Max[0, 1 - (1 - b)\/gammaA2]",
+			"0",
+			"Min[1, (b + gammaA2)\/gammaC2]",
+			"Min[1, Max[0, (b + gammaA2 - gammaC2)\/(1 - gammaC2)]]"
+		],
+		[
+			"1",
+			"0",
+			"Max[0, Min[1, (b - gammaC2)\/gammaA2]]",
+			"Min[1, Max[0, 1 - (-b + gammaC2)\/gammaA2]]",
+			"1",
+			"Max[0, (b - gammaA2 - gammaC2)\/(1 - gammaC2)]"
+		],
+		[
+			"0",
+			"1",
+			"Max[0, Min[1, (b - gammaC2)\/gammaA2]]",
+			"Min[1, Max[0, 1 - (-b + gammaC2)\/gammaA2]]",
+			"1",
+			"Max[0, (b - gammaA2 - gammaC2)\/(1 - gammaC2)]"
+		],
+		[
+			"1",
+			"0",
+			"Min[1, Max[0, 1 - (-b + gammaC2)\/gammaA2]]",
+			"Max[0, Min[1, (b - gammaC2)\/gammaA2]]",
+			"1",
+			"Max[0, (b - gammaA2 - gammaC2)\/(1 - gammaC2)]"
+		],
+		[
+			"0",
+			"1",
+			"Min[1, Max[0, 1 - (-b + gammaC2)\/gammaA2]]",
+			"Max[0, Min[1, (b - gammaC2)\/gammaA2]]",
+			"1",
+			"Max[0, (b - gammaA2 - gammaC2)\/(1 - gammaC2)]"
+		],
+		[
+			"0",
+			"1",
+			"0",
+			"1",
+			"b",
+			"b"
+		],
+		[
+			"1",
+			"0",
+			"1",
+			"0",
+			"b",
+			"b"
+		],
+		[
+			"0",
+			"1",
+			"1",
+			"0",
+			"b",
+			"b"
+		],
+		[
+			"0",
+			"1",
+			"1",
+			"Min[1, b\/gammaA2]",
+			"Max[0, b - gammaA2]",
+			"Max[0, b - gammaA2]"
+		],
+		[
+			"1",
+			"0",
+			"1",
+			"Min[1, b\/gammaA2]",
+			"Max[0, b - gammaA2]",
+			"Max[0, b - gammaA2]"
+		],
+		[
+			"1",
+			"0",
+			"1",
+			"(2*b*g)\/(1 + g + 2*g*gammaA2)",
+			"(b*(1 + g))\/(1 + g + 2*g*gammaA2)",
+			"(b*(1 + g))\/(1 + g + 2*g*gammaA2)"
+		],
+		[
+			"0",
+			"1",
+			"1",
+			"Min[b\/gammaA2, (1 + (-1 + b)*g)\/(1 + g*gammaA2)]",
+			"Max[0, (b + (-1 + g)*gammaA2)\/(1 + g*gammaA2)]",
+			"Max[0, (b + (-1 + g)*gammaA2)\/(1 + g*gammaA2)]"
+		],
+		[
+			"0",
+			"1",
+			"0",
+			"(1 + g*(-1 + b + gammaA2))\/(1 + g*gammaA2)",
+			"(b + g*gammaA2)\/(1 + g*gammaA2)",
+			"(b + g*gammaA2)\/(1 + g*gammaA2)"
+		],
+		[
+			"0",
+			"1",
+			"0",
+			"Max(1-(1 - b)\/gammaA2, 1-b\/Max(b, 1 - gammaA2))",
+			"b\/Max(b, 1 - gammaA2)",
+			"b\/Max(b, 1 - gammaA2)"
+		],
+		[
+			"1 - b",
+			"b",
+			"1 - b",
+			"b",
+			"b",
+			"b"
+		]
+	]
+}

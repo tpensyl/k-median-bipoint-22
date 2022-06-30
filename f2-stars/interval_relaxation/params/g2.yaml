@@ -1,0 +1,11 @@
+method: "heap"
+solver: "CPLEX"
+g: [0.642,0.833]
+b: [0,1]
+gammaA: [[0,"inf"],[0,"inf"]]
+mass: "minimal30"
+max_iters: 1000
+
+max_jobs: 1000 # Only for Heap Method
+
+expected: 1.305
