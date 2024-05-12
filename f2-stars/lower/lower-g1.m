@@ -8,6 +8,8 @@ SetOptions[EvaluationNotebook[],CellContext->Notebook, PrintPrecision->9]
 SetOptions[Plot3D, AxesLabel->Automatic,
 	PlotStyle->Opacity[.7], ClippingStyle->None,
 	BoundaryStyle -> Directive[Black, Thick]];
+
+
 Import@FileNameJoin[{ParentDirectory[NotebookDirectory[]],"util","visualizeMass.m"}]
 
 
