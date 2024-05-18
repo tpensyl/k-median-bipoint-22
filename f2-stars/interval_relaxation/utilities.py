@@ -2,8 +2,14 @@ import sympy as sp
 import json,heapq
 import numpy as np
 
-files  = ["%.4f"%i for i in  np.linspace(1.304,1.309,6)]+["%.4f"%i for i in  np.linspace(1.3100,1.3109,10)]
-files += ["%.4f"%i for i in  np.linspace(1.311,1.319,9)]+["1.32","1.33"]
+# BASE = "output/"
+BASE = "../../../../../../ssd2/kishen/kmedian/output/"
+
+# files  = ["%.4f"%i for i in  np.linspace(1.304,1.309,6)]+["%.4f"%i for i in  np.linspace(1.3100,1.3109,10)]
+# files += ["%.4f"%i for i in  np.linspace(1.311,1.319,9)]+["1.32","1.33"]
+files  = ["%.4f"%i for i in  np.linspace(2.6060,2.6095,8)]
+files += ["%.4f"%i for i in  np.linspace(2.610,2.619,10)]+["%.4f"%i for i in  np.linspace(2.62,2.7,9)]
+files += ["2.8","2.9","3"]
 files = files[::-1]
 files_val = [float(i) for i in files]
 
@@ -217,17 +223,17 @@ def divide_interval(interval,n,value):
 def init_files(n):
     for file_name in files:
         # if file_name=="1.30" or file_name=="1.310":
-        #     with open("output/g"+str(n-1)+"/heap/heap_"+file_name+".json","w") as f:
+        #     with open(BASE+"g"+str(n-1)+"/heap/heap_"+file_name+".json","w") as f:
         #         json.dump({"length":0,"worst":0,"heap":[]},f,indent=4)
         # else:
-        with open("output/g"+str(n-1)+"/heap/heap_"+file_name+".json","w") as f:
+        with open(BASE+"g"+str(n-1)+"/heap/heap_"+file_name+".json","w") as f:
             json.dump({"length":0,"intervals":[]},f,indent=4)
 
 
 def get_next(n,method,iter_num,max_jobs=1000):
     next_intervals = []
     if method=="layer":
-        with open("output/g"+str(n-1)+"/"+method+"/next_intervals"+".json","r") as f:
+        with open(BASE + "g"+str(n-1)+"/"+method+"/next_intervals"+".json","r") as f:
             items = json.load(f)
             next_intervals = items["next"]
     elif method=="heap":
@@ -235,27 +241,27 @@ def get_next(n,method,iter_num,max_jobs=1000):
         for file_name in files:
             content = []
             # if file_name=="1.30" or file_name=="1.310":
-            #     with open("output/g"+str(n-1)+"/" +method+ "/heap_"+file_name+".json","r") as f:
+            #     with open(BASE + "g"+str(n-1)+"/" +method+ "/heap_"+file_name+".json","r") as f:
             #         content = json.load(f) # {"length","worst","heap"}
             #         heap = content["heap"]
             #         more = [json.loads(heapq.heappop(heap)[1]) for num in range(min(content["length"],max_jobs))]
             #         next_intervals+=more
             #         rem-=len(more)
-            #     with open("output/g"+str(n-1)+"/" +method+ "/heap_"+file_name+".json","w") as f:
+            #     with open(BASE + "g"+str(n-1)+"/" +method+ "/heap_"+file_name+".json","w") as f:
             #         json.dump({"length":len(heap),"worst":(0 if len(heap)==0 else -heap[0][0]),"heap":heap},f,indent=4)
             # else:
-            with open("output/g"+str(n-1)+"/"+method+"/heap_"+file_name+".json","r") as f:
+            with open(BASE + "g"+str(n-1)+"/"+method+"/heap_"+file_name+".json","r") as f:
                 content = json.load(f) # {"length","intervals"}
                 more = content["intervals"][:min(content["length"],rem)]
                 content["intervals"] = content["intervals"][min(content["length"],rem):]
                 content["length"] = len(content["intervals"])
                 next_intervals+=more
                 rem-=len(more)
-            with open("output/g"+str(n-1)+"/"+method+"/heap_"+file_name+".json","w") as f:
+            with open(BASE + "g"+str(n-1)+"/"+method+"/heap_"+file_name+".json","w") as f:
                 json.dump(content,f,indent=4)
             if rem==0:
                 break
-        with open("output/g"+str(n-1)+"/"+method+"/current"+".json","w") as f:
+        with open(BASE + "g"+str(n-1)+"/"+method+"/current"+".json","w") as f:
             json.dump({"Number of Intervals":len(next_intervals),"intervals":next_intervals,"iter":iter_num},f,indent=4)
        
     return next_intervals
@@ -273,9 +279,9 @@ def heap_dump(new_intervals,n):
             exit(1)
     for file_name in files:
         # if file_name=="1.30" or file_name=="1.310":
-        #     with open("output/g"+str(n-1)+"/heap/heap_"+file_name+".json","r") as f:
+        #     with open(BASE + "g"+str(n-1)+"/heap/heap_"+file_name+".json","r") as f:
         #         content = json.load(f) # {"length","worst","heap"}
-        #     with open("output/g"+str(n-1)+"/heap/heap_"+file_name+".json","w") as f:
+        #     with open(BASE + "g"+str(n-1)+"/heap/heap_"+file_name+".json","w") as f:
         #         for interval in intervals_map[file_name]:
         #             heapq.heappush(content["heap"],[-interval["value"],json.dumps(interval)])
         #         content["length"] += len(intervals_map[file_name])
@@ -283,9 +289,9 @@ def heap_dump(new_intervals,n):
         #         json.dump(content,f,indent=4)
         # else:
         if len(intervals_map[file_name]) >0:
-            with open("output/g"+str(n-1)+"/heap/heap_"+file_name+".json","r") as f:
+            with open(BASE + "g"+str(n-1)+"/heap/heap_"+file_name+".json","r") as f:
                 content = json.load(f) # {"length","intervals"}
-            with open("output/g"+str(n-1)+"/heap/heap_"+file_name+".json","w") as f:
+            with open(BASE + "g"+str(n-1)+"/heap/heap_"+file_name+".json","w") as f:
                 content["intervals"] += intervals_map[file_name]
                 content["length"] += len(intervals_map[file_name])
                 json.dump(content,f,indent=4)
@@ -293,8 +299,8 @@ def heap_dump(new_intervals,n):
 def dump_results(worst,results,next_intervals,iter_num,n,exec_time,method="layer"):
     done_intervals = [inter for inter in results if inter['end']]
     not_done_intervals = [inter for inter in results if not inter['end']]
-    with open("output/g"+str(n-1)+"/"+method+"/iter"+str(iter_num)+".json","w") as f:
+    with open(BASE + "g"+str(n-1)+"/"+method+"/iter"+str(iter_num)+".json","w") as f:
         json.dump({"iter_num":iter_num,"Number of intervals":len(results),"time":exec_time,"worst":worst,"Number done:":len(done_intervals),"Number not done:":len(not_done_intervals),"done results":done_intervals,"not done results":not_done_intervals},f,indent=4)
     if method == "layer":
-        with open("output/g"+str(n-1)+"/"+method+"/next_intervals"+".json","w") as f:
+        with open(BASE + "g"+str(n-1)+"/"+method+"/next_intervals"+".json","w") as f:
             json.dump({"iter_num":iter_num,"length":len(next_intervals),"next":next_intervals},f,indent=4)

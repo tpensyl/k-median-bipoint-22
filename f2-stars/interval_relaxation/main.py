@@ -4,6 +4,9 @@ import numpy as np
 from utilities import simplify_mass,replace_inf,init_files
 from methods import HeapMethod,LayeredMethod
 
+# BASE = "output/"
+BASE = "../../../../../../ssd2/kishen/kmedian/output/"
+
 def handler(signum,frame):
     exit(1)
     
@@ -40,7 +43,7 @@ def main():
 		]
 	else:
 		next_intervals = []
-		with open("output/g"+str(n-1)+"/heap/current.json","r") as f:
+		with open(BASE + "g"+str(n-1)+"/heap/current.json","r") as f:
 			content = json.load(f)
 			next_intervals = content["intervals"]
 			if iter_num!= content["iter"]:

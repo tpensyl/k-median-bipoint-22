@@ -4,29 +4,36 @@ import sympy as sp
 from ortools.linear_solver import pywraplp
 
 
+"""
+LPSolver Class:
+    Given an interval, it creates the LP instance and solves it.
+"""
 class LPSolver:
     def __init__(self,n,mass,interval,iter_num,solver="GLOP")->None:
         self.n = n
-        self.solver = solver
-        self.iter_num = iter_num
-        self.g = interval["g"]
-        self.b = interval["b"]
-        self.interval = interval # Ex: "gammaA":[(l,u),(l,u),]
-        self.mass = self.assign_mass(mass)
-        self.constraints = []
+        self.solver = solver               # [CPLEX, MOSEK, GLOP, GUROBI]
+        self.iter_num = iter_num           # Current Iteration
+        self.g = interval["g"]             # The g-threshold values
+        self.b = interval["b"]             # Interval range for b
+        self.interval = interval           # Ex: "gammaA":[(l,u),(l,u),]
+        self.mass = self.assign_mass(mass) # Computes upper and lower bounds for the probability mass, given interval
+        self.constraints = []              # List containing LP constraints
         self.flag = 0
         if solver == "GLOP":
             self.prob = pywraplp.Solver.CreateSolver('GLOP')
-        self.gen_basic(); self.gen_cons()
+        self.gen_basic(); self.gen_cons()  # Generate variables and constraints
         if solver != "GLOP":
             self.prob = cp.Problem(cp.Maximize(self.X),self.constraints)
         if solver == "GLOP":
-            # self.prob.SetSolverSpecificParametersAsString('solution_feasibility_tolerance:1e-5')
+            self.prob.SetSolverSpecificParametersAsString('solution_feasibility_tolerance:100000')
+            # self.prob.SetSolverSpecificParametersAsString('use_dual_simplex: true')
+            # self.prob.SetSolverSpecificParametersAsString('primal_feasibility_tolerance:1e-6')
+            # self.prob.SetSolverSpecificParametersAsString('dual_feasibility_tolerance:1e-12')
             for constraint in self.constraints:
                 self.prob.Add(constraint)
             self.prob.Maximize(self.X)
 
-    def assign_mass(self,mass):
+    def assign_mass(self,mass): # Function to compute the probability mass given interval
         new_mass = []
         pairs = [(sp.symbols('gammaA%d_max'%(i+2)),self.interval["gammaA"][i][1]) for i in range(self.n-1)]
         pairs += [(sp.symbols('gammaA%d_min'%(i+2)),self.interval["gammaA"][i][0]) for i in range(self.n-1)]
@@ -76,7 +83,7 @@ class LPSolver:
             new_mass.append(new_alg)
         return new_mass
     
-    def gen_basic(self):
+    def gen_basic(self): # Function to generate variables and basic constraints
         self.X = cp.Variable(name="X") if self.solver != "GLOP" else self.prob.NumVar(0, self.prob.infinity(), 'X')
         if self.solver=="GLOP":
             self.varDAB = [self.prob.NumVar(0, self.prob.infinity(), "d1A"+str(i+1)+"B"+str(j+1)) for i in range(self.n) for j in range(self.n)]
@@ -92,11 +99,10 @@ class LPSolver:
         D2 = cp.sum(self.varDB+self.varDC) if self.solver != "GLOP" else sum(self.varDB+self.varDC)
         self.D1=D1
         self.D2=D2
-        self.basic_constraints  = [self.X>=1] + [d >= 0 for d in self.varDAB+self.varDAC+self.varDB+self.varDC]
-        # self.basic_constraints += [1 >= D2*(self.b[0])+D1*(1-self.b[1])]
-        self.basic_constraints += [1 >= D2+(D1-D2)*(1-self.b[1]),D2<=D1]
-        # self.basic_constraints += [self.X <= self.b[1]*(3-2*self.b[0])*D2+(1-self.b[0])*D1]
-        self.basic_constraints += [self.X <= 1+2*self.b[1]*(1-self.b[0])*D2]
+        self.basic_constraints  = [self.X >= 1] + [d >= 0 for d in self.varDAB+self.varDAC+self.varDB+self.varDC]
+        self.basic_constraints += [D2+(D1-D2)*(1-self.b[1]) <= 1, D2<=D1] # aD1+bD2 <= 1
+        # self.basic_constraints += [self.X <= 2+4*self.b[1]*(1-self.b[0])*D2] # X <= aD1+b(3-2b)D2
+        self.basic_constraints += [self.X <= 2-0.00536*self.b[0] + 2*(2-0.00536*self.b[0])*self.b[1]*(1-self.b[0])*D2] # X<=(2-eta*b)(aD1+b(3-2b)D2)
         self.constraints += self.basic_constraints
 
     def gen_cons(self):
@@ -130,9 +136,11 @@ class LPSolver:
                     # g = 1 if i==self.n-1 else self.g[i]
                     constraint.append(p2[1]*d2+(1-p2[0])*d1+(1-p2[0])*(1-p1[0])*g*(d1+d2))
             if self.solver == "GLOP":
-                self.alg_constraints += [self.X <= sum(constraint)]
+                # self.alg_constraints += [self.X <= 2*sum(constraint)]
+                self.alg_constraints += [self.X <= (2-0.00536*self.b[0])*sum(constraint)]
             else:
-                self.alg_constraints += [self.X <= cp.sum(constraint)]
+                # self.alg_constraints += [self.X <= 2*cp.sum(constraint)]
+                self.alg_constraints += [self.X <= (2-0.00536*self.b[0])*cp.sum(constraint)]
         self.constraints += self.alg_constraints
 
     def solve(self):
@@ -150,7 +158,7 @@ class LPSolver:
             return {"status":"unbounded"}
         output = {}
         for variable in self.prob.variables():
-            output[variable.name()] = np.float(variable.value) if self.solver != "GLOP" else np.float(variable.solution_value())
+            output[variable.name()] = np.float64(variable.value) if self.solver != "GLOP" else np.float64(variable.solution_value())
         return output
         # for ind,constraint in enumerate(self.alg_constraints):
         #     if constraint.dual_value > 1e-6:
@@ -160,89 +168,3 @@ class LPSolver:
 class GradientDescent:
     def __init__(self):
         pass
-
-
-# def assign_mass(self,mass):
-    #     new_mass = []
-    #     pairs = [(sp.symbols('gammaA%d_max'%(i+2)),self.interval["gammaA"][i][1]) for i in range(self.n-1)]
-    #     pairs += [(sp.symbols('gammaA%d_min'%(i+2)),self.interval["gammaA"][i][0]) for i in range(self.n-1)]
-    #     pairs += [(sp.symbols("b_max"),self.interval["b"][1]),(sp.symbols("b_min"),self.interval["b"][0])]
-    #     for alg in mass:
-    #         new_alg = []
-    #         for term in alg:
-    #             if type(term[0])==int:
-    #                 new_alg.append(term)
-    #             else:
-    #                 ln,ld,un,ud = term[0][0].subs(pairs),term[0][1].subs(pairs),term[1][0].subs(pairs),term[1][1].subs(pairs)
-    #                 if len(term[0])>2:
-    #                     ln2,ld2,un2,ud2 = term[0][2].subs(pairs),term[0][3].subs(pairs),term[1][2].subs(pairs),term[1][3].subs(pairs)
-    #                 if np.inf in [ln,ld] or -np.inf in [ln,ld]:
-    #                     l = self.handle_inf(term[0][0],term[0][1],pairs,"l")
-    #                 else:
-    #                     l = 0 if ln==0 else (ln*np.inf if ld==0 else ln/ld)
-    #                 if np.inf in [un,ud] or -np.inf in [un,ud]:
-    #                     u = self.handle_inf(term[1][0],term[1][1],pairs,"u")
-    #                 else:
-    #                     u = 0 if un==0 else (un*np.inf if ud==0 else un/ud)
-    #                 if len(term[0])>2:
-    #                     if np.inf in [ln2,ld2] or -np.inf in [ln2,ld2]:
-    #                         l2 = self.handle_inf(term[0][2],term[0][3],pairs,"l")
-    #                     else:
-    #                         l2 = 0 if ln2==0 else (ln2*np.inf if ld2==0 else ln2/ld2)
-    #                     if np.inf in [un2,ud2] or -np.inf in [un2,ud2]:
-    #                         u2 = self.handle_inf(term[1][2],term[1][3],pairs,"u")
-    #                     else:
-    #                         u2 = 0 if un2==0 else (un2*np.inf if ud2==0 else un2/ud2)
-    #                     l = np.max([l,l2,0])
-    #                     u = np.max([u,u2,0])
-    #                 if [np.min([1,np.max([0,l])]),np.min([1,np.max([0,u])])]==[1,0]:
-    #                     print(term)
-    #                     print(self.interval)
-    #                     print(ln,ld,un,ud)
-    #                     print(l,u)
-    #                 l,u = np.min([1,np.max([0,l])]),np.min([1,np.max([0,u])])
-    #                 new_alg.append([l,u])
-                    
-    #         new_mass.append(new_alg)
-    #     return new_mass
-
-    # def handle_inf(self,term,pairs,flag="l"):
-    #     inds = [i+2 for i in range(len(self.interval["gammaA"])) if self.interval["gammaA"][i][1]==np.inf]
-    #     num,den = sp.fraction(term)
-    #     args = term.free_symbols
-    #     print("args:",args)
-    #     w1 = [[sp.symbols("gammaA%d_min"%i),sp.symbols("gammaA%d_max"%i)] for i in inds if (sp.symbols("gammaA%d_max"%i) in args)]
-    #     print("w1:",w1)
-    #     w2 = [i[::-1] for i in w1]
-    #     w1p = [i[1] for i in w1]
-    #     w2p = [i[0] for i in w1]
-    #     num_val = num.subs(pairs)
-    #     den_val = den.subs(pairs)
-    #     num_pos,num_neg = num.coeff(1),num.coeff(-1)
-    #     den_pos,den_neg = den.coeff(1),den.coeff(-1)
-    #     if flag=="l":
-    #         if self.iter_num==0:
-    #             return 0
-    #         # if den_val==0:
-    #         #     return num_val*np.inf
-    #         print(term, num_pos,num_neg,den_pos,den_neg)
-    #         print(num_pos.subs(w1)/sp.prod(w1p), ";",num_pos.subs(w1),";",sp.prod(w1p))
-    #         num_pos,num_neg = (num_pos.subs(w1)/sp.prod(w1p)).expand(),num_neg.subs(w2)/(sp.prod(w2p)).expand()
-    #         ln = num_pos.subs(pairs)-num_neg.subs(pairs)
-    #         den_pos,den_neg = (den_pos.subs(w2)/sp.prod(w2p)).expand(),den_neg.subs(w1)/(sp.prod(w1p)).expand()
-    #         ld = den_pos.subs(pairs)-den_neg.subs(pairs)
-    #         l = 0 if ln==0 else (ln*np.inf if ld==0 else ln/ld)
-    #         return l
-    #     elif flag=="u":
-    #         if self.iter_num==0:
-    #             return 1
-    #         # if den_val==0:
-    #         #     return num_val*np.inf
-    #         print(term, num_pos,num_neg,den_pos,den_neg)
-    #         print(num_pos.subs(w1)/sp.prod(w1p), ";",num_pos.subs(w1),";",sp.prod(w1p))
-    #         num_pos,num_neg = (num_pos.subs(w2)/sp.prod(w2p)).expand(),num_neg.subs(w1)/(sp.prod(w1p)).expand()
-    #         un = num_pos.subs(pairs)-num_neg.subs(pairs)
-    #         den_pos,den_neg = (den_pos.subs(w1)/sp.prod(w1p)).expand(),den_neg.subs(w2)/(sp.prod(w2p)).expand()
-    #         ud = den_pos.subs(pairs)-den_neg.subs(pairs)
-    #         u = 1 if (un==0 and ud==0) else (un*np.inf if ud==0 else un/ud)
-    #         return u
