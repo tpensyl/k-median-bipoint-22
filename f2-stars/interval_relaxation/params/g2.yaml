@@ -1,11 +1,11 @@
 method: "heap"
-solver: "GUROBI"
+solver: "CPLEX"
 g: [0.642,0.833]
 b: [0,1]
 gammaA: [[0,"inf"],[0,"inf"]]
 mass: "minimal30"
+
+max_jobs: 10000
 max_iters: 1000
 
-max_jobs: 10000 # Only for Heap Method
-
-expected: 2.606
+expected: 2.607

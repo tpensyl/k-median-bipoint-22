@@ -2,8 +2,7 @@ import sympy as sp
 import json,heapq
 import numpy as np
 
-# BASE = "output/"
-BASE = "../../../../../../ssd2/kishen/kmedian/output/"
+BASE = "output/"
 
 # files  = ["%.4f"%i for i in  np.linspace(1.304,1.309,6)]+["%.4f"%i for i in  np.linspace(1.3100,1.3109,10)]
 # files += ["%.4f"%i for i in  np.linspace(1.311,1.319,9)]+["1.32","1.33"]
